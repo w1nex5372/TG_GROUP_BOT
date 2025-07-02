@@ -17,7 +17,8 @@ const constants = cleanEnv(process.env, {
     DATABASE_URL: str(),
     REDIS_CACHE_URL: str(),
     GRAMJS_API_ID: str(),
-    GRAMJS_API_HASH: str()
+    GRAMJS_API_HASH: str(),
+    GRAMJS_STRING_SESSION: str({ default: "", desc: "GramJS string session for bot login" }),
 });
 
 export default constants;

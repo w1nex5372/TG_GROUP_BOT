@@ -1,6 +1,7 @@
 import { bot, adapter }from "./bot";
 import constants from "./config"
-import { gramjs } from './utility';
+import fs from 'fs';
+import { gramjs, stringSession, sessionFilePath } from './utility';
 import { logger, channel_log } from "./logger"
 import { Context } from "grammy";
 import { run, sequentialize } from "@grammyjs/runner";
@@ -38,6 +39,22 @@ bot.use(modules);
     await bot.api.deleteWebhook({ drop_pending_updates: true });
     await gramjs.setLogLevel(LogLevel.NONE)
     await gramjs.start({botAuthToken: constants.BOT_TOKEN});  
+    
+    try {
+        const newSession = stringSession.save();
+        let oldSession = "";
+        if (fs.existsSync(sessionFilePath)) {
+            oldSession = fs.readFileSync(sessionFilePath, 'utf8').trim();
+        }
+        if (newSession !== oldSession) {
+            fs.writeFileSync(sessionFilePath, newSession, 'utf8');
+            console.log(`🔐 GramJS session saved to ${sessionFilePath}`);
+        } else {
+            console.log(`ℹ️ GramJS session unchanged; not rewriting ${sessionFilePath}`);
+        }
+    } catch (e) {
+        console.error("Failed to update session file:", e);
+    }
 })();
 
 bot.init().then(async() => {

@@ -62,7 +62,7 @@
     DATABASE_URL=your-postgresql-connection-url
     API_ID=your-telegram-api-id
     API_HASH=your-telegram-api-hash
-    STRING_SESSION=your-gramjs-string-session
+    GRAMJS_STRING_SESSION=your-gramjs-string-session
     ```
     You can generate the GramJS string session using [telegramtools.com/string-session-generator](https://telegramtools.com/string-session-generator).
 
