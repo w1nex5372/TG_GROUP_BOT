@@ -358,7 +358,7 @@ async function setfloodmode(ctx: any) {
     }
 }
 
-composer.on(["message", "edited_message"], async (ctx: any, next) => {
+composer.chatType(["supergroup", "group"]).on(["message", "edited_message"], async (ctx: any, next) => {
     await captureflood(ctx);
     await next();
 });
