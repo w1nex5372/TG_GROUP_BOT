@@ -224,7 +224,7 @@ composer.callbackQuery(RegExp(/u:(.*)/), (async(ctx: any) => {
         premium_status = "🌟 Premium Account";
     }
     else {
-        premium_status = "Non-Premium Account";
+        premium_status = "Non-premium Account";
     }
     message_body += `\n<b>Premium</b>: ${premium_status}`;
 

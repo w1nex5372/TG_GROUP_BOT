@@ -633,7 +633,7 @@ export async function resolveUserhandle(userhandle: string) {
         );
         return user;
     }
-    catch (ValueError) {
+    catch (error) {
         return undefined;
     } 
         

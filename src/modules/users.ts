@@ -9,6 +9,8 @@ async function userInfoPublic(ctx: any, user_id: string) {
     let user = await resolveUserhandle(user_id);
     let userfull = await getUserFullInstance(user);
     let userinstance = await getUserInstance(user);
+
+    console.log("User instance:", userinstance);
     
     let photos = await gramjs.invoke(new gramJsApi.photos.GetUserPhotos({
         userId: userinstance.id,
@@ -58,9 +60,59 @@ async function userInfoPublic(ctx: any, user_id: string) {
         premium_status = "🌟 Premium Account";
     }
     else {
-        premium_status = "Non-Premium Account";
+        premium_status = "Non-premium Account";
     }
     message_body += `\n<b>Premium</b>: ${premium_status}`;
+
+    // Verification status
+    if (userinstance.verified) {
+        message_body += `\n<b>Verified</b>: ✅ Verified Account`;
+    }
+
+    // Bot status
+    if (userinstance.bot) {
+        message_body += `\n<b>Account Type</b>: 🤖 Bot`;
+    } else {
+        message_body += `\n<b>Account Type</b>: 👤 User`;
+    }
+
+    // Security flags
+    let securityFlags = [];
+    if (userinstance.scam) securityFlags.push("⚠️ Scam");
+    if (userinstance.fake) securityFlags.push("🚫 Fake");
+    if (userinstance.restricted) securityFlags.push("🔒 Restricted");
+    if (securityFlags.length > 0) {
+        message_body += `\n<b>Security Flags</b>: ${securityFlags.join(", ")}`;
+    }
+
+    // Emoji status
+    if (userinstance.emojiStatus) {
+        message_body += `\n<b>Emoji Status</b>: 😊 Custom emoji status set`;
+    }
+
+    // Stories info
+    if (userinstance.storiesMaxId > 0) {
+        message_body += `\n<b>Stories</b>: ${userinstance.storiesMaxId} stories posted`;
+        if (userinstance.storiesHidden) {
+            message_body += " (Hidden)";
+        }
+        if (userinstance.storiesUnavailable) {
+            message_body += " (Unavailable)";
+        }
+    }
+
+    // Close friend status
+    if (userinstance.closeFriend) {
+        message_body += `\n<b>Relationship</b>: 💚 Close Friend`;
+    }
+
+    // Profile color info
+    if (userinstance.color) {
+        message_body += `\n<b>Profile Color</b>: Color ID ${userinstance.color.color}`;
+        if (userinstance.color.backgroundEmojiId) {
+            message_body += ` with custom background`;
+        }
+    }
 
     // Profile picture count
     let photos_string = JSON.stringify(photos);
@@ -132,9 +184,75 @@ async function userInfoPrivate(ctx: any, user_id: string) {
         premium_status = "🌟 Premium Account";
     }
     else {
-        premium_status = "Non-Premium Account";
+        premium_status = "Non-premium Account";
     }
     message_body += `\n<b>Premium</b>: ${premium_status}`;
+
+    // Verification status
+    if (userinstance.verified) {
+        message_body += `\n<b>Verified</b>: ✅ Verified Account`;
+    }
+
+    // Bot status
+    if (userinstance.bot) {
+        message_body += `\n<b>Account Type</b>: 🤖 Bot`;
+        if (userinstance.botInfoVersion) {
+            message_body += ` (Version ${userinstance.botInfoVersion})`;
+        }
+    } else {
+        message_body += `\n<b>Account Type</b>: 👤 User`;
+    }
+
+    // Security flags
+    let securityFlags = [];
+    if (userinstance.scam) securityFlags.push("⚠️ Scam");
+    if (userinstance.fake) securityFlags.push("🚫 Fake");
+    if (userinstance.restricted) securityFlags.push("🔒 Restricted");
+    if (securityFlags.length > 0) {
+        message_body += `\n<b>Security Flags</b>: ${securityFlags.join(", ")}`;
+    }
+
+    // Emoji status
+    if (userinstance.emojiStatus) {
+        message_body += `\n<b>Emoji Status</b>: 😊 Custom emoji status set`;
+    }
+
+    // Stories info
+    if (userinstance.storiesMaxId > 0) {
+        message_body += `\n<b>Stories</b>: ${userinstance.storiesMaxId} stories posted`;
+        if (userinstance.storiesHidden) {
+            message_body += " (Hidden)";
+        }
+        if (userinstance.storiesUnavailable) {
+            message_body += " (Unavailable)";
+        }
+    }
+
+    // Close friend status
+    if (userinstance.closeFriend) {
+        message_body += `\n<b>Relationship</b>: 💚 Close Friend`;
+    }
+
+    // Contact status
+    if (userinstance.contact) {
+        message_body += `\n<b>Contact</b>: 📱 In your contacts`;
+    }
+    if (userinstance.mutualContact) {
+        message_body += `\n<b>Mutual Contact</b>: 🤝 Mutual contact`;
+    }
+
+    // Profile color info
+    if (userinstance.color) {
+        message_body += `\n<b>Profile Color</b>: Color ID ${userinstance.color.color}`;
+        if (userinstance.color.backgroundEmojiId) {
+            message_body += ` with custom background`;
+        }
+    }
+
+    // Language code (if available in private chats)
+    if (userinstance.langCode) {
+        message_body += `\n<b>Language</b>: ${userinstance.langCode.toUpperCase()}`;
+    }
 
     // Profile picture count
     let photos_string = JSON.stringify(photos);
