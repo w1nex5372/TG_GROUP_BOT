@@ -36,24 +36,28 @@ bot.api.config.use(hydrateFiles(bot.token));
 bot.use(modules);
 
 (async function () {
-    await bot.api.deleteWebhook({ drop_pending_updates: true });
-    await gramjs.setLogLevel(LogLevel.NONE)
-    await gramjs.start({botAuthToken: constants.BOT_TOKEN});  
-    
     try {
-        const newSession = stringSession.save();
-        let oldSession = "";
-        if (fs.existsSync(sessionFilePath)) {
-            oldSession = fs.readFileSync(sessionFilePath, 'utf8').trim();
-        }
-        if (newSession !== oldSession) {
-            fs.writeFileSync(sessionFilePath, newSession, 'utf8');
-            console.log(`🔐 GramJS session saved to ${sessionFilePath}`);
-        } else {
-            console.log(`ℹ️ GramJS session unchanged; not rewriting ${sessionFilePath}`);
-        }
+         await bot.api.deleteWebhook({ drop_pending_updates: true });
+         await gramjs.setLogLevel(LogLevel.NONE)
+         await gramjs.start({botAuthToken: constants.BOT_TOKEN});  
+         
+         try {
+             const newSession = stringSession.save();
+             let oldSession = "";
+             if (fs.existsSync(sessionFilePath)) {
+                 oldSession = fs.readFileSync(sessionFilePath, 'utf8').trim();
+             }
+             if (newSession !== oldSession) {
+                 fs.writeFileSync(sessionFilePath, newSession, 'utf8');
+                 console.log(`🔐 GramJS session saved to ${sessionFilePath}`);
+             } else {
+                 console.log(`ℹ️ GramJS session unchanged; not rewriting ${sessionFilePath}`);
+             }
+         } catch (e) {
+             console.error("Failed to update session file:", e);
+         }
     } catch (e) {
-        console.error("Failed to update session file:", e);
+        console.error("Startup error:", e);
     }
 })();
 
