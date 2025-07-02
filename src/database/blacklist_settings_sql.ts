@@ -1,30 +1,16 @@
 import { prisma } from "./index";
 
 export async function get_blacklist_settings(chatId: string) {
-    let blacklist_settings = await prisma.blacklist_settings.findUnique({
-        where: {
-            chat_id: chatId.toString()
-        }
-    })
-    return blacklist_settings;
+    return await prisma.blacklist_settings.findUnique({ where: { chat_id: chatId } });
 }
 
 export async function set_blacklist_settings(chatId: string, blacklist_type: bigint, value: string) {
     try {
-        let blacklist_settings = await prisma.blacklist_settings.upsert({
-            where: {
-                chat_id: chatId.toString()
-            },
-            update: {
-                blacklist_type: blacklist_type,
-                value: value
-            },
-            create: {
-                chat_id: chatId.toString(),
-                blacklist_type: blacklist_type,
-                value: value
-            }
-        })
+        await prisma.blacklist_settings.upsert({
+            where: { chat_id: chatId },
+            update: { blacklist_type, value },
+            create: { chat_id: chatId, blacklist_type, value }
+        });
         return true;
     }
     catch (e) {

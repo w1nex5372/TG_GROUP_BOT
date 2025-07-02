@@ -1,33 +1,23 @@
 import { prisma } from "./index";
 
 export async function get_blacklist(chatId: string) {
-    let blacklist = await prisma.blacklist.findMany({
-        where: {
-            chat_id: chatId.toString()
-        }
-    })
-    return blacklist;
+    return await prisma.blacklist.findFirst({ where: { chat_id: chatId } });
+}
+
+export async function get_all_blacklist(chatId: string) {
+    return await prisma.blacklist.findMany({ where: { chat_id: chatId } });
 }
 
 export async function set_blacklist(chatId: string, trigger: string) {
     try {
-        let blacklist = await prisma.blacklist.upsert({
-            where: {
-                chat_id_trigger: {chat_id: chatId.toString(), trigger: trigger}
-            },
-            update: {
-                trigger: trigger
-            },
-            create: {
-                chat_id: chatId.toString(),
-                trigger: trigger
-            }
-        })
-        return true;
-    }
-    catch (e) {
-        console.error(e)
-        return false;    
+        return await prisma.blacklist.upsert({
+            where: { chat_id_trigger: { chat_id: chatId, trigger } },
+            update: { trigger },
+            create: { chat_id: chatId, trigger }
+        });
+    } catch (e) {
+        console.error(e);
+        return false;
     }
 }
 
@@ -35,7 +25,7 @@ export async function reset_blacklist(chatId: string, trigger: string) {
     try {
         await prisma.blacklist.delete({
             where: {
-                chat_id_trigger: {chat_id: chatId.toString(), trigger: trigger}
+                chat_id_trigger: {chat_id: chatId, trigger: trigger}
             }
         })
         return true;

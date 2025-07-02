@@ -18,38 +18,24 @@ export async function is_blsticker(chatId: string, trigger: string) {
 }
 
 export async function get_blsticker(chatId: string) {
-    let blsticker = await prisma.blacklist_stickers.findFirst({
-        where: {
-            chat_id: chatId.toString(),
-        }
+    return await prisma.blacklist_stickers.findFirst({
+        where: { chat_id: chatId }
     });
-    return blsticker;
 }
 
 export async function get_all_blsticker(chatId: string) {
-    let blsticker = await prisma.blacklist_stickers.findMany({
-        where: {
-            chat_id: chatId.toString(),
-        }
+    return await prisma.blacklist_stickers.findMany({
+        where: { chat_id: chatId }
     });
-    return blsticker
 }
 
 export async function set_blsticker(chatId: string, trigger: string) {
     try {
-        let blsticker = await prisma.blacklist_stickers.upsert({
-            where: {
-                chat_id_trigger: {chat_id: chatId.toString(), trigger: trigger}
-            },
-            update: {
-                trigger: trigger
-            },
-            create: {
-                chat_id: chatId.toString(),
-                trigger: trigger
-            }
-        })
-        return blsticker;
+        return await prisma.blacklist_stickers.upsert({
+            where: { chat_id_trigger: { chat_id: chatId, trigger } },
+            update: { trigger },
+            create: { chat_id: chatId, trigger }
+        });
     }
     catch (e) {
         console.error(e)
@@ -57,14 +43,9 @@ export async function set_blsticker(chatId: string, trigger: string) {
     }
 }
 
-
 export async function del_blsticker(chatId: string, trigger: string) {
     try {
-        await prisma.blacklist_stickers.delete({
-            where: {
-                chat_id_trigger: {chat_id: chatId.toString(), trigger: trigger}
-            }
-        })
+        await prisma.blacklist_stickers.delete({ where: { chat_id_trigger: { chat_id: chatId, trigger } } });
         return true;
     }
     catch (e) {
@@ -75,11 +56,7 @@ export async function del_blsticker(chatId: string, trigger: string) {
 
 export async function del_all_blsticker(chatId: string) {
     try {
-        let blsticker = await prisma.blacklist_stickers.deleteMany({
-            where: {
-                chat_id: chatId.toString()
-            }
-        })
+        await prisma.blacklist_stickers.deleteMany({ where: { chat_id: chatId } });
         return true;
     }
     catch (e) {

@@ -1,33 +1,15 @@
 import { prisma } from "./index";
 
 export async function get_filter(chatId: string, keyword: string) {
-    let filter = await prisma.filters.findFirst({
-        where: {
-            chat_id: chatId.toString(),
-            keyword: keyword,
-        }
-    });
-    return filter;
+    return await prisma.filters.findFirst({ where: { chat_id: chatId, keyword } });
 };
 
 export async function set_filter(chatId: string, keyword: string, reply: string | null, msgtype: number, file: string | null) {
     try {
-        let filter = await prisma.filters.upsert({
-            where: {
-                chat_id_keyword: {chat_id: chatId.toString(), keyword: keyword}
-            },
-            update: {
-                reply: reply,
-                msgtype: msgtype,
-                file: file,
-            },
-            create: {
-                chat_id: chatId.toString(),
-                keyword: keyword,
-                reply: reply,
-                msgtype: msgtype,
-                file: file,
-            }
+        await prisma.filters.upsert({
+            where: { chat_id_keyword: { chat_id: chatId, keyword } },
+            update: { reply, msgtype, file },
+            create: { chat_id: chatId, keyword, reply, msgtype, file }
         });
         return true;
     }
@@ -38,21 +20,12 @@ export async function set_filter(chatId: string, keyword: string, reply: string 
 }
 
 export async function get_all_chat_filters(chatId: string) {
-    let filters = await prisma.filters.findMany({
-        where: {
-            chat_id: chatId.toString(),
-        }
-    });
-    return filters;
+    return await prisma.filters.findMany({ where: { chat_id: chatId } });
 }
 
 export async function stop_filter(chatId: string, keyword: string) {
     try {
-        await prisma.filters.delete({
-            where: {
-                chat_id_keyword: {chat_id: chatId.toString(), keyword: keyword}
-            }
-        });
+        await prisma.filters.delete({ where: { chat_id_keyword: { chat_id: chatId, keyword } } });
         return true;
     }
     catch (e) {
@@ -63,11 +36,7 @@ export async function stop_filter(chatId: string, keyword: string) {
 
 export async function stop_all_chat_filters(chatId: string) {
     try {
-        await prisma.filters.deleteMany({
-            where: {
-                chat_id: chatId.toString(),
-            }
-        });
+        await prisma.filters.deleteMany({ where: { chat_id: chatId } });
         return true;
     }
     catch (e) {
