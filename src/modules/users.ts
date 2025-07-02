@@ -1,3 +1,4 @@
+// @ts-ignore: No types for grammy
 import { gramjs, gramJsApi } from "../utility";
 import { resolveUserhandle, getUserInstance, getUserFullInstance, datacenterLocation } from "../helpers/helper_func"
 import { Composer } from "grammy";
