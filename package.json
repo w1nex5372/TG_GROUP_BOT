@@ -59,7 +59,7 @@
     "pg": "^8.11.3",
     "sharp": "^0.32.6",
     "systeminformation": "^5.22.0",
-    "telegram": "^2.20.2",
+    "telegram": "^2.26.22",
     "winston": "^3.11.0"
   }
 }

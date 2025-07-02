@@ -10,8 +10,6 @@ async function userInfoPublic(ctx: any, user_id: string) {
     let userfull = await getUserFullInstance(user);
     let userinstance = await getUserInstance(user);
 
-    console.log("User instance:", userinstance);
-    
     let photos = await gramjs.invoke(new gramJsApi.photos.GetUserPhotos({
         userId: userinstance.id,
         offset:0,
@@ -19,10 +17,13 @@ async function userInfoPublic(ctx: any, user_id: string) {
     }));
 
     // Name
-    let message_body = `<b>Name</b>: ${userinstance.firstName} `;
+    let message_body = `${userinstance.firstName}`;
     if (userinstance.lastName) {
         message_body += userinstance.lastName;
     };
+
+    // User ID
+    message_body += ` (<code>${userinstance.id}</code>)\n`;
     
     // Username
     if (userinstance.username) {
@@ -34,9 +35,6 @@ async function userInfoPublic(ctx: any, user_id: string) {
         message_body += `\n<b>Usernames</b>:`;
         userinstance.usernames.forEach(async(user: any) => message_body += (`\n - @${user.username}`))
     }
-
-    // User ID
-    message_body += `\n<b>ID</b>: <code>${userinstance.id}</code>`;
 
     // User bio
     if (userfull.fullUser.about) {
@@ -69,13 +67,6 @@ async function userInfoPublic(ctx: any, user_id: string) {
         message_body += `\n<b>Verified</b>: ✅ Verified Account`;
     }
 
-    // Bot status
-    if (userinstance.bot) {
-        message_body += `\n<b>Account Type</b>: 🤖 Bot`;
-    } else {
-        message_body += `\n<b>Account Type</b>: 👤 User`;
-    }
-
     // Security flags
     let securityFlags = [];
     if (userinstance.scam) securityFlags.push("⚠️ Scam");
@@ -83,11 +74,6 @@ async function userInfoPublic(ctx: any, user_id: string) {
     if (userinstance.restricted) securityFlags.push("🔒 Restricted");
     if (securityFlags.length > 0) {
         message_body += `\n<b>Security Flags</b>: ${securityFlags.join(", ")}`;
-    }
-
-    // Emoji status
-    if (userinstance.emojiStatus) {
-        message_body += `\n<b>Emoji Status</b>: 😊 Custom emoji status set`;
     }
 
     // Stories info
@@ -101,19 +87,6 @@ async function userInfoPublic(ctx: any, user_id: string) {
         }
     }
 
-    // Close friend status
-    if (userinstance.closeFriend) {
-        message_body += `\n<b>Relationship</b>: 💚 Close Friend`;
-    }
-
-    // Profile color info
-    if (userinstance.color) {
-        message_body += `\n<b>Profile Color</b>: Color ID ${userinstance.color.color}`;
-        if (userinstance.color.backgroundEmojiId) {
-            message_body += ` with custom background`;
-        }
-    }
-
     // Profile picture count
     let photos_string = JSON.stringify(photos);
     let regex = /"count"\s*:\s*(\d+)/;
@@ -124,11 +97,22 @@ async function userInfoPublic(ctx: any, user_id: string) {
     } 
 
     // User mention
-    message_body += `\n<b>Permalink</b>: <a href="tg://user?id=${userinstance.id}">User Profile</a>`;
+    message_body += `\n<b>Permalink</b>: <a href=\"tg://user?id=${userinstance.id}\">User Profile</a>`;
 
-    await gramjs.sendMessage(ctx.chat.id, {
-        file:photos.photos[0], message: message_body, parseMode: "html"
-    });
+    // send profile photo as spoiler via Bot API
+    const profilePhotos = await ctx.api.getUserProfilePhotos(userinstance.id, { limit: 1 });
+    if (profilePhotos.total_count > 0) {
+        const sizes = profilePhotos.photos[0];
+        const largest = sizes[sizes.length - 1];
+        await ctx.api.sendPhoto(ctx.chat.id, largest.file_id, {
+            caption: message_body,
+            parse_mode: 'HTML',
+            has_spoiler: true
+        });
+    } else {
+        await ctx.api.sendMessage(ctx.chat.id, message_body, { parse_mode: 'HTML' });
+    }
+    return;
 }
  
 async function userInfoPrivate(ctx: any, user_id: string) {
@@ -143,10 +127,13 @@ async function userInfoPrivate(ctx: any, user_id: string) {
     }));
 
     // Name
-    let message_body = `<b>Name</b>: ${userinstance.firstName} `;
+    let message_body = `${userinstance.firstName}`;
     if (userinstance.lastName) {
         message_body += userinstance.lastName;
     };
+
+    // User ID
+    message_body += ` (<code>${userinstance.id}</code>)\n`;
     
     // Username
     if (userinstance.username) {
@@ -157,11 +144,8 @@ async function userInfoPrivate(ctx: any, user_id: string) {
     if (userinstance.usernames) {
         message_body += `\n<b>Usernames</b>:`;
         userinstance.usernames.forEach(async(user: any) => message_body += (`\n - @${user.username}`))
-    }
+    };
 
-    // User ID
-    message_body += `\n<b>ID</b>: <code>${userinstance.id}</code>`;
-    
     // User bio
     if (userfull.fullUser.about) {
         message_body += `\n<b>Bio</b>: ${userfull.fullUser.about}`;
@@ -169,7 +153,7 @@ async function userInfoPrivate(ctx: any, user_id: string) {
 
     // Datacenter
     if (userinstance.photo != null) {
-        let datacenter = await datacenterLocation(userinstance.photo.dcId);;
+        let datacenter = await datacenterLocation(userinstance.photo.dcId);
         message_body += `\n<b>Datacenter</b>: ${datacenter}`;
     };
 
@@ -228,19 +212,6 @@ async function userInfoPrivate(ctx: any, user_id: string) {
         }
     }
 
-    // Close friend status
-    if (userinstance.closeFriend) {
-        message_body += `\n<b>Relationship</b>: 💚 Close Friend`;
-    }
-
-    // Contact status
-    if (userinstance.contact) {
-        message_body += `\n<b>Contact</b>: 📱 In your contacts`;
-    }
-    if (userinstance.mutualContact) {
-        message_body += `\n<b>Mutual Contact</b>: 🤝 Mutual contact`;
-    }
-
     // Profile color info
     if (userinstance.color) {
         message_body += `\n<b>Profile Color</b>: Color ID ${userinstance.color.color}`;
@@ -266,9 +237,19 @@ async function userInfoPrivate(ctx: any, user_id: string) {
     // User mention
     message_body += `\n<b>Permalink</b>: <a href="tg://user?id=${userinstance.id}">User Profile</a>`;
 
-    await gramjs.sendMessage(ctx.chat.id, {
-        file:photos.photos[0], message: message_body, parseMode: "html"
-    });
+    // send profile photo normally via Bot API
+    const profilePhotos = await ctx.api.getUserProfilePhotos(userinstance.id, { limit: 1 });
+    if (profilePhotos.total_count > 0) {
+        const sizes = profilePhotos.photos[0];
+        const largest = sizes[sizes.length - 1];
+        await ctx.api.sendPhoto(ctx.chat.id, largest.file_id, {
+            caption: message_body,
+            parse_mode: 'HTML'
+        });
+    } else {
+        await ctx.api.sendMessage(ctx.chat.id, message_body, { parse_mode: 'HTML' });
+    }
+    return;
 }
 
 async function fetchId(ctx: any) {

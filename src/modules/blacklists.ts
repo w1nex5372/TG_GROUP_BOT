@@ -1,5 +1,5 @@
 import { Composer, InlineKeyboard } from "grammy";
-import { get_blacklist, reset_all_blacklist, reset_blacklist, set_blacklist } from "../database/blacklist_sql";
+import { get_blacklist, get_all_blacklist, reset_all_blacklist, reset_blacklist, set_blacklist } from "../database/blacklist_sql";
 import { adminCanDeleteMessages, adminCanRestrictUsers, adminCanRestrictUsersCallback, botCanDeleteMessages, botCanRestrictUsers, botCanRestrictUsersCallback, convertUnixTime, extract_time, format_json, isUserAdmin, isUserBanned, isUserRestricted, ownerOnly, ownerOnlyCallback } from "../helpers/helper_func";
 import { get_blacklist_settings, set_blacklist_settings } from "../database/blacklist_settings_sql";
 import { get_warn_numbers, get_warn_settings, set_warn_numbers, set_warn_settings } from "../database/warns_sql";
@@ -14,7 +14,7 @@ import { get_blsticker_settings, set_blsticker_settings } from "../database/blst
 const composer = new Composer();
 
 async function blacklist(ctx: any) {
-    let blacklist = await get_blacklist(ctx.chat.id);
+    let blacklist = await get_all_blacklist(ctx.chat.id.toString());
     let filter_list = `Current blacklisted words in <b>${ctx.chat.title}</b>:\n\n`;
     
     if (blacklist && blacklist.length > 0) {
@@ -277,7 +277,7 @@ async function blacklistmode(ctx: any) {
             return;
     }
 
-    let blacklist = await get_blacklist(chatId);
+    let blacklist = await get_all_blacklist(chatId);
     await set_blacklist_settings(chatId, mode, newValue);
 
     let cachedData = blacklistCache.get(chatId);
@@ -451,7 +451,7 @@ const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
 async function updateBlacklistCache(chatId: string) {
     let [blacklist, settings] = await Promise.all([
-        get_blacklist(chatId),
+        get_all_blacklist(chatId),
         get_blacklist_settings(chatId)
     ]);
 
@@ -467,104 +467,95 @@ async function updateBlacklistCache(chatId: string) {
 }
 
 composer.chatType(["supergroup", "group"]).on(["message", "edited_message"], async (ctx: any, next) => {
-    let chatId = ctx.chat?.id.toString();
+     let chatId = ctx.chat?.id.toString();
 
-    let cachedData = blacklistCache.get(chatId);
-    let now = Date.now();
+     let cachedData = blacklistCache.get(chatId);
+     let now = Date.now();
 
-    if (!cachedData || now > cachedData.expiry) {
-        let [blacklist, settings] = await Promise.all([
-            get_blacklist(ctx.chat.id),
-            get_blacklist_settings(chatId)
-        ]);
+     if (!cachedData || now > cachedData.expiry) {
+         const blacklistList = await get_all_blacklist(chatId);
+         const settingsRec = await get_blacklist_settings(chatId);
+         const modeValue = settingsRec?.blacklist_type ?? 2n;
+         const valValue = settingsRec?.value ?? "0";
+         const wordsSet = new Set<{ chat_id: string; trigger: string }>(blacklistList);
+         cachedData = {
+             mode: modeValue,
+             value: valValue,
+             words: wordsSet,
+             expiry: now + CACHE_DURATION
+         };
+         blacklistCache.set(chatId, cachedData);
+     }
 
-        if (!settings || settings.blacklist_type === null) {
-            cachedData = {
-                mode: 2n, // Default mode warn
-                value: "0",
-                words: new Set(blacklist),
-                expiry: now + CACHE_DURATION
-            };
-        } else {
-            cachedData = {
-                mode: settings.blacklist_type,
-                value: settings.value ?? "0",
-                words: new Set(blacklist),
-                expiry: now + CACHE_DURATION
-            };
-        }
-        blacklistCache.set(chatId, cachedData);
-    }
+     let messageText = ctx.message.text || ctx.edited_message.text;
+     let blacklistedWord = [...cachedData.words].find(word => {
+         let escapedTrigger = word.trigger.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+         let regex = new RegExp(`\\b${escapedTrigger}\\b`, 'i');
+         let isMatch = regex.test(messageText);
+         return isMatch;
+     });
 
-    let messageText = ctx.message.text || ctx.edited_message.text;
-    let blacklistedWord = [...cachedData.words].find(word => {
-        let escapedTrigger = word.trigger.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-        let regex = new RegExp(`\\b${escapedTrigger}\\b`, 'i');
-        let isMatch = regex.test(messageText);
-        return isMatch;
-    });
+     let duration_value;
+     if (cachedData.value) {
+         duration_value = cachedData.value;
+     }
+     else {
+         duration_value = "365d";
+     }
 
-    let duration_value;
-    if (cachedData.value) {
-        duration_value = cachedData.value;
-    }
-    else {
-        duration_value = "365d";
-    }
+     if (blacklistedWord) {
+         let isAdmin = await isUserAdmin(ctx, ctx.from.id)
+         if (!isAdmin) {
+             let mute_message = (
+                 `<b>🔇 Stay quiet</b> <a href="tg://user?id=${ctx.from.id}">${ctx.from.first_name}</a> (<code>${ctx.from.id}</code>)<b>!</b>\n\n`  
+             );
+             let ban_message = (
+                 `<b>🚷 Banned</b> <a href="tg://user?id=${ctx.from.id}">${ctx.from.first_name}</a> (<code>${ctx.from.id}</code>)<b>!</b>\n\n` 
+             );
 
-    if (blacklistedWord) {
-        let isAdmin = await isUserAdmin(ctx, ctx.from.id)
-        if (!isAdmin) {
-            let mute_message = (
-                `<b>🔇 Stay quiet</b> <a href="tg://user?id=${ctx.from.id}">${ctx.from.first_name}</a> (<code>${ctx.from.id}</code>)<b>!</b>\n\n`  
-            );
-            let ban_message = (
-                `<b>🚷 Banned</b> <a href="tg://user?id=${ctx.from.id}">${ctx.from.first_name}</a> (<code>${ctx.from.id}</code>)<b>!</b>\n\n` 
-            );
+             switch (cachedData.mode) {
+                 case 0n:
+                     return;
+                 case 1n:
+                     await ctx.deleteMessage().catch(() => {})
+                     break;
+                 case 2n:
+                     await blacklist_warn(ctx, ctx.from.id, ctx.from.first_name, `The message ${ctx.from.first_name} sent, contained a blacklisted word: <tg-spoiler><s>${blacklistedWord?.trigger}</s></tg-spoiler>`);
+                     break;
+                 case 3n:
+                     mute_message += `The message ${ctx.from.first_name} sent, contained a blacklisted word: <tg-spoiler><s>${blacklistedWord?.trigger}</s></tg-spoiler>`
+                     await blacklist_mute(ctx, ctx.from.id, mute_message);
+                     break;
+                 case 4n:
+                     await blacklist_kick(ctx, ctx.from.id, `The message ${ctx.from.first_name} sent, contained a blacklisted word: <tg-spoiler><s>${blacklistedWord?.trigger}</s></tg-spoiler>\n\n<b>Kicked outta the group!</b>`);
+                     break;
+                 case 5n:
+                     ban_message += `The message ${ctx.from.first_name} sent, contained a blacklisted word: <tg-spoiler><s>${blacklistedWord?.trigger}</s></tg-spoiler>\n\n`
+                     await blacklist_ban(ctx, ctx.from.id, ban_message);
+                     break;
+                 case 6n:
+                     ban_message += `The message ${ctx.from.first_name} sent, contained a blacklisted word: <tg-spoiler><s>${blacklistedWord?.trigger}</s></tg-spoiler>\n\n`
+                     let ban_duration = await extract_time(ctx, duration_value);
+                     if (ban_duration != false) {
+                         let converted_time = await convertUnixTime(Number(ban_duration));
+                         ban_message += `Ban duration: ${converted_time}`;
+                     }
+                     await blacklist_tban(ctx, ctx.from.id, ban_duration, ban_message)
+                     break;
+                 case 7n:
+                     mute_message += `The message ${ctx.from.first_name} sent, contained a blacklisted word: <tg-spoiler><s>${blacklistedWord?.trigger}</s></tg-spoiler>`
+                     let mute_duration = await extract_time(ctx, duration_value);
+                     if (mute_duration != false) {
+                         let converted_time = await convertUnixTime(Number(mute_duration));
+                         mute_message += `Mute duration: ${converted_time}`;
+                     }
+                     await blacklist_tmute(ctx, ctx.from.id, mute_duration, mute_message)
+                     break;
+             }
+         }
+     }
 
-            switch (cachedData.mode) {
-                case 0n:
-                    return;
-                case 1n:
-                    await ctx.deleteMessage().catch(() => {})
-                    break;
-                case 2n:
-                    await blacklist_warn(ctx, ctx.from.id, ctx.from.first_name, `The message ${ctx.from.first_name} sent, contained a blacklisted word: <tg-spoiler><s>${blacklistedWord?.trigger}</s></tg-spoiler>`);
-                    break;
-                case 3n:
-                    mute_message += `The message ${ctx.from.first_name} sent, contained a blacklisted word: <tg-spoiler><s>${blacklistedWord?.trigger}</s></tg-spoiler>`
-                    await blacklist_mute(ctx, ctx.from.id, mute_message);
-                    break;
-                case 4n:
-                    await blacklist_kick(ctx, ctx.from.id, `The message ${ctx.from.first_name} sent, contained a blacklisted word: <tg-spoiler><s>${blacklistedWord?.trigger}</s></tg-spoiler>\n\n<b>Kicked outta the group!</b>`);
-                    break;
-                case 5n:
-                    ban_message += `The message ${ctx.from.first_name} sent, contained a blacklisted word: <tg-spoiler><s>${blacklistedWord?.trigger}</s></tg-spoiler>\n\n`
-                    await blacklist_ban(ctx, ctx.from.id, ban_message);
-                    break;
-                case 6n:
-                    ban_message += `The message ${ctx.from.first_name} sent, contained a blacklisted word: <tg-spoiler><s>${blacklistedWord?.trigger}</s></tg-spoiler>\n\n`
-                    let ban_duration = await extract_time(ctx, duration_value);
-                    if (ban_duration != false) {
-                        let converted_time = await convertUnixTime(Number(ban_duration));
-                        ban_message += `Ban duration: ${converted_time}`;
-                    }
-                    await blacklist_tban(ctx, ctx.from.id, ban_duration, ban_message)
-                    break;
-                case 7n:
-                    mute_message += `The message ${ctx.from.first_name} sent, contained a blacklisted word: <tg-spoiler><s>${blacklistedWord?.trigger}</s></tg-spoiler>`
-                    let mute_duration = await extract_time(ctx, duration_value);
-                    if (mute_duration != false) {
-                        let converted_time = await convertUnixTime(Number(mute_duration));
-                        mute_message += `Mute duration: ${converted_time}`;
-                    }
-                    await blacklist_tmute(ctx, ctx.from.id, mute_duration, mute_message)
-                    break;
-            }
-        }
-    }
-
-    await next();
+     await next();
 });
 
 composer.chatType(["supergroup", "group"]).command(["blacklist", "blacklists"], adminCanRestrictUsers(adminCanDeleteMessages(botCanRestrictUsers(botCanDeleteMessages(async (ctx: any) => {
@@ -596,7 +587,7 @@ composer.chatType(["supergroup", "group"]).command("addblacklist", adminCanRestr
     
     await updateBlacklistCache(ctx.chat.id.toString());
 
-    let blacklist = await get_blacklist(ctx.chat.id.toString());
+    let blacklist = await get_all_blacklist(ctx.chat.id.toString());
     let blacklist_settings = await get_blacklist_settings(ctx.chat.id.toString());
     let cachedData = blacklistCache.get(ctx.chat.id.toString());
     let now = Date.now();
@@ -661,7 +652,7 @@ composer.chatType(["supergroup", "group"]).command(["unblacklist", "rmblacklist"
 
     await updateBlacklistCache(ctx.chat.id.toString());
 
-    let blacklist = await get_blacklist(ctx.chat.id);
+    let blacklist = await get_all_blacklist(ctx.chat.id);
     let blacklist_settings = await get_blacklist_settings(ctx.chat.id);
     let cachedData = blacklistCache.get(ctx.chat.id);
     let now = Date.now();
@@ -958,7 +949,7 @@ composer.chatType(["supergroup", "group"]).command(["unblstickerall", "rmblstick
     await updateBlacklistCache(ctx.chat.id.toString());
 }));
 
-composer.chatType(["supergroup", "group"]).command("blstickermode", adminCanRestrictUsers(adminCanDeleteMessages(botCanRestrictUsers(botCanDeleteMessages(async (ctx: any) => {
+composer.chatType(["supergroup", "group"]).command("blstickermode", adminCanRestrictUsers(adminCanDeleteMessages(botCanDeleteMessages(botCanDeleteMessages(async (ctx: any) => {
     await blstickermode(ctx);
     await updateBlacklistCache(ctx.chat.id.toString());
 })))));
