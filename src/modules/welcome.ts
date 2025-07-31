@@ -395,9 +395,9 @@ composer.on("chat_member", async (ctx: any, next) => {
                 } 
             
                 if (custom_welcome) {
-                    let memberCount = await ctx.api.getChatMemberCount(ctx.chat.id);           
-                    message = messageFillings(custom_welcome, user, chat, memberCount)
-                    message = await escapeMarkdownV2(message)
+                    let memberCount = await ctx.api.getChatMemberCount(ctx.chat.id);
+                    message = messageFillings(custom_welcome, user, chat, memberCount);
+                    message = await escapeMarkdownV2(message);
                 }
             
                 if (!custom_content && !custom_welcome) {
@@ -406,10 +406,13 @@ composer.on("chat_member", async (ctx: any, next) => {
                 else {
                     let current_message = await sendWelcome(ctx, welcome_type, message, custom_content, parseMode, keyboard);   
                 
-                    if (clean_welcome) {
-                        await ctx.api.deleteMessage(ctx.chat.id, Number(previous_welcome)) 
-                        await set_clean_welcome(ctx.chat.id, current_message.message_id);
+                if (clean_welcome) {
+                    const prevId = Number(previous_welcome);
+                    if (!isNaN(prevId)) {
+                        await ctx.api.deleteMessage(ctx.chat.id, prevId);
                     }
+                    await set_clean_welcome(ctx.chat.id, current_message.message_id);
+                }
                 
                 }
             }
@@ -429,10 +432,14 @@ composer.on("chat_member", async (ctx: any, next) => {
             } 
             else {
                 if (custom_leave) {
-                    let memberCount = await ctx.api.getChatMemberCount(ctx.chat.id);           
-                    let filledMessage = messageFillings(custom_leave, user, chat, memberCount)
-                    filledMessage = await escapeMarkdownV2(custom_leave)
-                    await sendGoodbye(ctx, leave_type, filledMessage, parseMode);
+                    let memberCount = await ctx.api.getChatMemberCount(ctx.chat.id);
+                    let filledMessage = messageFillings(custom_leave, user, chat, memberCount);
+                    filledMessage = await escapeMarkdownV2(filledMessage);
+                    if (leave_type >= 3 && leave_type <= 8) {
+                        await ctx.api.sendDocument(ctx.chat.id, custom_leave, { caption: filledMessage, parse_mode: parseMode });
+                    } else {
+                        await ctx.reply(filledMessage, { parse_mode: parseMode });
+                    }
                 }
                 else {
                     await ctx.reply(`See you again, ${user.first_name}! (<tg-spoiler>maybe never</tg-spoiler>)`, {parse_mode: "HTML"})
