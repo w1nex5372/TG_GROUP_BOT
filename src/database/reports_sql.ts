@@ -1,12 +1,12 @@
 import { prisma } from "./index";
 
 export async function get_report_settings(chatId: string) {
-    return await prisma.chat_report_settings.findUnique({ where: { chat_id: chatId } });
+    return await prisma.chat_report_settings.findUnique({ where: { chat_id: chatId.toString() } });
 }
 
 export async function set_report_settings(chatId: string, shouldReport: boolean) {
     try {
-        await prisma.chat_report_settings.upsert({ where: { chat_id: chatId }, update: { should_report: shouldReport }, create: { chat_id: chatId, should_report: true } });
+        await prisma.chat_report_settings.upsert({ where: { chat_id: chatId.toString() }, update: { should_report: shouldReport }, create: { chat_id: chatId.toString(), should_report: true } });
         return true;
     }
     catch (e) {

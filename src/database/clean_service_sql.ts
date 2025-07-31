@@ -1,12 +1,12 @@
 import { prisma } from "./index";
 
 export async function get_clean_service(chatId: string) {
-    return await prisma.clean_service.findUnique({ where: { chat_id: chatId } });
+    return await prisma.clean_service.findUnique({ where: { chat_id: chatId.toString() } });
 }
 
 export async function set_clean_service(chatId: string, cleanService: boolean) {
     try {
-        await prisma.clean_service.upsert({ where: { chat_id: chatId }, update: { clean_service: cleanService }, create: { chat_id: chatId, clean_service: cleanService } });
+        await prisma.clean_service.upsert({ where: { chat_id: chatId.toString() }, update: { clean_service: cleanService }, create: { chat_id: chatId.toString(), clean_service: cleanService } });
         return true;
     }
     catch (e) {

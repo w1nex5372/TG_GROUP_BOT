@@ -3,7 +3,7 @@ import { prisma } from "./index";
 export async function get_rules(chatId: string) {
     let rules = await prisma.rules.findUnique({
         where: {
-        chat_id: chatId,
+        chat_id: chatId.toString(),
         }
     });
     return rules?.rules;
@@ -13,13 +13,13 @@ export async function set_rules(chatId: string, rulesText: string) {
     try {
         let rules = await prisma.rules.upsert({
             where: {
-                chat_id: chatId,
+                chat_id: chatId.toString(),
             },
             update: {
                 rules: rulesText,
             },
             create: {
-                chat_id: chatId,
+                chat_id: chatId.toString(),
                 rules: rulesText,
             }
         });
@@ -35,7 +35,7 @@ export async function reset_rules(chatId: string) {
     try {
         let resetRules = await prisma.rules.delete({
             where: {
-                chat_id: chatId,
+                chat_id: chatId.toString(),
             }
         });
         return true;
