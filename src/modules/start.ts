@@ -60,9 +60,18 @@ const module_help = {
 `,
     
       anilist: `
-🇯🇵 <b>AniList</b>
+ 🇯🇵 <b>AniList</b>
 
-- /anime &lt;anime name&gt; - Fetches anime information from anilist.co
+ - /anime &lt;anime name&gt; - Fetches anime information from AniList.co
+ - /manga &lt;manga name&gt; - Fetches manga information from AniList.co
+ - /character &lt;character name&gt; - Fetches character information from AniList.co
+ - /favorites | /favs - Lists your favorite anime
+ - /mywaifu - Shows your set waifu
+ - /myhusbando - Shows your set husbando
+ - /top [genres] [tags] - Shows top anime by genre or tag
+ - /getgenres - Lists available genres
+ - /gettags - Lists available tags
+ - /fillers &lt;anime name&gt; - Lists filler episodes for the anime
 `,
 
   antiflood: `
