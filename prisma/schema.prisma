@@ -475,3 +475,24 @@ model welcome_urls {
 
   @@id([id, chat_id])
 }
+
+model user_favorites {
+  user_id     BigInt
+  anime_id    String
+  anime_title String
+  anime_image String?
+  created_at  DateTime @default(now())
+
+  @@id([user_id, anime_id])
+}
+
+model user_characters {
+  user_id         BigInt
+  character_id    String
+  character_name  String
+  character_image String?
+  type            String
+  created_at      DateTime @default(now())
+
+  @@id([user_id, type])
+}
