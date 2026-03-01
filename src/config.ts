@@ -19,6 +19,19 @@ const constants = cleanEnv(process.env, {
     GRAMJS_API_ID: str(),
     GRAMJS_API_HASH: str(),
     GRAMJS_STRING_SESSION: str({ default: "", desc: "GramJS string session for bot login" }),
+    // Clients list
+    CLIENTS_ENABLED: str({ default: "false" }),
+    CLIENTS_TARGET_CHAT_ID: str({ default: "" }),
+    CLIENTS_REPOST_HOURS: str({ default: "2" }),
+    CLIENTS_DELETE_PREVIOUS: str({ default: "true" }),
+    CLIENTS_FIRE_ON_START: str({ default: "true" }),
+    // Ads rotator
+    ADS_ENABLED: str({ default: "false" }),
+    ADS_SOURCE_CHAT_ID: str({ default: "" }),
+    ADS_SOURCE_MESSAGE_ID: str({ default: "" }),
+    ADS_TARGET_CHAT_ID: str({ default: "" }),
+    ADS_INTERVAL_MINUTES: str({ default: "30" }),
+    ADS_FIRE_ON_START: str({ default: "false" }),
 });
 
 export default constants;

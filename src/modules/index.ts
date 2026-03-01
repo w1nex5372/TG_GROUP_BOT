@@ -1,4 +1,5 @@
 import admin from './admin';
+import clientsList from '../clients_list';
 import afk from './afk';
 import anilist from "./anilist";
 import antiflood from './antiflood';
@@ -34,6 +35,7 @@ import { Composer } from "grammy";
 const composer = new Composer();
 
 composer.use(
+    clientsList,
     admin,
     afk,
     anilist,

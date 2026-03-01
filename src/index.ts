@@ -11,6 +11,8 @@ import { hydrateFiles } from '@grammyjs/files';
 import { LogLevel } from 'telegram/extensions/Logger';
 
 import modules from "./modules/index";
+import { startAdsRotator } from "./ads_rotator";
+import { startClientsList } from "./clients_list";
 
 const runner = run(bot, { 
     runner: { 
@@ -74,6 +76,8 @@ bot.init().then(async() => {
     );
     console.log(bot_info);
     channel_log(bot_info);
+    startAdsRotator(bot);
+    startClientsList(bot);
 });
 
 async function exitSignal(signal: String) {
