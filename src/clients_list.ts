@@ -2,6 +2,17 @@ import { Bot, Context, Composer, InlineKeyboard } from "grammy";
 import * as fs from "fs";
 import * as path from "path";
 import { superusersOnly } from "./helpers/helper_func";
+import constants from "./config";
+
+/**
+ * Clients list scheduler.
+ * Example setup:
+ * CLIENTS_ENABLED=true
+ * CLIENTS_TARGET_CHAT_ID=-1003846193977
+ * CLIENTS_REPOST_HOURS=2
+ * CLIENTS_DELETE_PREVIOUS=true
+ * CLIENTS_FIRE_ON_START=true
+ */
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -96,13 +107,13 @@ async function postClients(api: any, targetChatId: number, deletePrevious: boole
 // ── Scheduler ──────────────────────────────────────────────────────────────
 
 export function startClientsList<C extends Context>(bot: Bot<C>): void {
-    const enabled = process.env.CLIENTS_ENABLED === "true";
+    const enabled = constants.CLIENTS_ENABLED === "true";
     if (!enabled) return;
 
-    const targetChatId = Number(process.env.CLIENTS_TARGET_CHAT_ID);
-    const repostHours = Number(process.env.CLIENTS_REPOST_HOURS || "2");
-    const deletePrevious = process.env.CLIENTS_DELETE_PREVIOUS !== "false";
-    const fireOnStart = process.env.CLIENTS_FIRE_ON_START !== "false"; // default true
+    const targetChatId = Number(constants.CLIENTS_TARGET_CHAT_ID);
+    const repostHours = Number(constants.CLIENTS_REPOST_HOURS || "2");
+    const deletePrevious = constants.CLIENTS_DELETE_PREVIOUS !== "false";
+    const fireOnStart = constants.CLIENTS_FIRE_ON_START !== "false"; // default true
 
     if (!targetChatId) {
         console.error(
@@ -230,8 +241,8 @@ composer.command("clients", superusersOnly(async (ctx: any) => {
 
 // /postclients — post immediately to target group
 composer.command("postclients", superusersOnly(async (ctx: any) => {
-    const targetChatId = Number(process.env.CLIENTS_TARGET_CHAT_ID);
-    const deletePrevious = process.env.CLIENTS_DELETE_PREVIOUS !== "false";
+    const targetChatId = Number(constants.CLIENTS_TARGET_CHAT_ID);
+    const deletePrevious = constants.CLIENTS_DELETE_PREVIOUS !== "false";
 
     if (!targetChatId) {
         return ctx.reply("❌ CLIENTS_TARGET_CHAT_ID is not configured.", {
