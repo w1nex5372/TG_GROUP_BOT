@@ -96,4 +96,4 @@
 ## Bottom Notes
 Feel free to clone, contribute and raise issues. You can even reach out to me on [Telegram](https://telegram.me/please_help_me_im_dumb).
 
-The project was rushed due to time constraints, so there might be some bugs and issues. Although, we're just getting started ;)
+The project was rushed due to time constraints, so there might be some bugs and issues. Although, we're just getting started ;)# TG_GROUP_BOT
