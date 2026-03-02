@@ -29,8 +29,11 @@ const constants = cleanEnv(process.env, {
     ADS_ENABLED: str({ default: "false" }),
     ADS_SOURCE_CHAT_ID: str({ default: "" }),
     ADS_SOURCE_MESSAGE_ID: str({ default: "" }),
+    ADS_SCHEDULE: str({ default: "" }),
     ADS_TARGET_CHAT_ID: str({ default: "" }),
     ADS_INTERVAL_MINUTES: str({ default: "30" }),
+    ADS_MIN_GAP_SECONDS: str({ default: "60" }),
+    ADS_TICK_SECONDS: str({ default: "30" }),
     ADS_FIRE_ON_START: str({ default: "false" }),
 });
 
