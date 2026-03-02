@@ -25,11 +25,15 @@ const constants = cleanEnv(process.env, {
     CLIENTS_REPOST_HOURS: str({ default: "2" }),
     CLIENTS_DELETE_PREVIOUS: str({ default: "true" }),
     CLIENTS_FIRE_ON_START: str({ default: "true" }),
+    AUTO_POSTCLIENTS_ENABLED: str({ default: "false" }),
+    AUTO_POSTCLIENTS_INTERVAL_MINUTES: str({ default: "15" }),
     // Ads rotator
     ADS_ENABLED: str({ default: "false" }),
     ADS_SOURCE_CHAT_ID: str({ default: "" }),
     ADS_SOURCE_MESSAGE_ID: str({ default: "" }),
     ADS_TARGET_CHAT_ID: str({ default: "" }),
+    AD_TARGET_CHAT_ID: str({ default: "" }),
+    ADS_LINK_URL: str({ default: "" }),
     ADS_INTERVAL_MINUTES: str({ default: "30" }),
     ADS_FIRE_ON_START: str({ default: "false" }),
 });

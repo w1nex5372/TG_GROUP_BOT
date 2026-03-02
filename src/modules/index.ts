@@ -1,4 +1,5 @@
 import admin from './admin';
+import adbuttons from './adbuttons';
 import clientsList from '../clients_list';
 import afk from './afk';
 import anilist from "./anilist";
@@ -36,6 +37,7 @@ const composer = new Composer();
 
 composer.use(
     clientsList,
+    adbuttons,
     admin,
     afk,
     anilist,

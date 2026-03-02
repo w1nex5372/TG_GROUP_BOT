@@ -1,6 +1,7 @@
 import { Bot, Context, Composer, InlineKeyboard } from "grammy";
 import * as fs from "fs";
 import * as path from "path";
+import IORedis from "ioredis";
 import { superusersOnly } from "./helpers/helper_func";
 import constants from "./config";
 
@@ -77,10 +78,19 @@ function buildPayload(clients: Client[]): { text: string; keyboard: InlineKeyboa
     return { text, keyboard };
 }
 
+export function buildClientsKeyboard(): InlineKeyboard {
+    const clients = loadClients();
+    return buildPayload(clients).keyboard;
+}
+
 // ── Core post function (internal, takes raw api object) ───────────────────
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function postClients(api: any, targetChatId: number, deletePrevious: boolean): Promise<void> {
+export async function postClientsToTarget(
+    api: any,
+    targetChatId: number,
+    deletePrevious: boolean
+): Promise<void> {
     const clients = loadClients();
     if (clients.length === 0) {
         console.log("[ClientsList] No clients to post.");
@@ -138,7 +148,7 @@ export function startClientsList<C extends Context>(bot: Bot<C>): void {
         }
         busy = true;
         try {
-            await postClients(bot.api, targetChatId, deletePrevious);
+            await postClientsToTarget(bot.api, targetChatId, deletePrevious);
         } catch (err) {
             console.error("[ClientsList] Failed to post clients:", err);
         } finally {
@@ -251,7 +261,7 @@ composer.command("postclients", superusersOnly(async (ctx: any) => {
     }
 
     try {
-        await postClients(ctx.api, targetChatId, deletePrevious);
+        await postClientsToTarget(ctx.api, targetChatId, deletePrevious);
         await ctx.reply("✅ Clients list posted.", {
             reply_parameters: { message_id: ctx.message.message_id },
         });
@@ -261,5 +271,101 @@ composer.command("postclients", superusersOnly(async (ctx: any) => {
         });
     }
 }));
+
+let autoPostClientsSchedulerStarted = false;
+
+export function startAutoPostClients<C extends Context>(bot: Bot<C>): void {
+    if (autoPostClientsSchedulerStarted) {
+        console.log("[AutoPostClients] Scheduler already started in this process, skipping.");
+        return;
+    }
+
+    const enabled = constants.AUTO_POSTCLIENTS_ENABLED === "true";
+    if (!enabled) return;
+
+    const targetChatId = Number(constants.CLIENTS_TARGET_CHAT_ID);
+    const intervalMinutes = Number(constants.AUTO_POSTCLIENTS_INTERVAL_MINUTES || "15");
+    const deletePrevious = constants.CLIENTS_DELETE_PREVIOUS !== "false";
+
+    if (!targetChatId) {
+        console.error(
+            "[AutoPostClients] AUTO_POSTCLIENTS_ENABLED=true but CLIENTS_TARGET_CHAT_ID is missing. Disabled."
+        );
+        return;
+    }
+
+    if (intervalMinutes <= 0 || !Number.isFinite(intervalMinutes)) {
+        console.error("[AutoPostClients] AUTO_POSTCLIENTS_INTERVAL_MINUTES must be a positive number. Disabled.");
+        return;
+    }
+
+    autoPostClientsSchedulerStarted = true;
+
+    const lockTtlMs = Math.max(30_000, Math.floor(intervalMinutes * 60 * 1000 * 0.9));
+    const redisLockKey = "autopostclients:lock";
+    let redis: IORedis | null = null;
+
+    try {
+        redis = new IORedis(constants.REDIS_CACHE_URL, { lazyConnect: true, maxRetriesPerRequest: 1 });
+    } catch (err) {
+        console.warn("[AutoPostClients] Redis client initialization failed, running without distributed lock:", err);
+    }
+
+    let busy = false;
+
+    const run = async () => {
+        if (busy) {
+            console.log("[AutoPostClients] Previous run still in progress, skipping.");
+            return;
+        }
+
+        busy = true;
+        let lockValue: string | null = null;
+        let hasDistributedLock = false;
+
+        try {
+            if (redis) {
+                try {
+                    if (redis.status !== "ready") {
+                        await redis.connect();
+                    }
+
+                    lockValue = `${process.pid}:${Date.now()}`;
+                    const acquired = await redis.set(redisLockKey, lockValue, "PX", lockTtlMs, "NX");
+                    if (acquired !== "OK") {
+                        console.log("[AutoPostClients] Lock already held by another instance, skipping.");
+                        return;
+                    }
+                    hasDistributedLock = true;
+                } catch (err) {
+                    console.warn("[AutoPostClients] Redis lock unavailable; continuing with single-process guard:", err);
+                }
+            }
+
+            await postClientsToTarget(bot.api, targetChatId, deletePrevious);
+        } catch (err) {
+            console.error("[AutoPostClients] Failed to auto-post clients:", err);
+        } finally {
+            if (redis && hasDistributedLock && lockValue) {
+                try {
+                    const current = await redis.get(redisLockKey);
+                    if (current === lockValue) {
+                        await redis.del(redisLockKey);
+                    }
+                } catch (err) {
+                    console.warn("[AutoPostClients] Failed to release Redis lock:", err);
+                }
+            }
+            busy = false;
+        }
+    };
+
+    setInterval(run, intervalMinutes * 60 * 1000);
+    run();
+
+    console.log(
+        `[AutoPostClients] Started. Posting to ${targetChatId} every ${intervalMinutes} minute(s).`
+    );
+}
 
 export default composer;
