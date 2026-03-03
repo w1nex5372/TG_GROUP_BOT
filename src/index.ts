@@ -12,7 +12,7 @@ import { LogLevel } from 'telegram/extensions/Logger';
 
 import modules from "./modules/index";
 import { startAdsRotator } from "./ads_rotator";
-import { startClientsList } from "./clients_list";
+import { startAutoPostClients } from "./clients_list";
 
 const runner = run(bot, { 
     runner: { 
@@ -63,7 +63,9 @@ bot.use(modules);
     }
 })();
 
+console.log("[BOOT] before bot.init");
 bot.init().then(async() => {
+    console.log("[BOOT] after bot.init");
     let currentTime = new Date().toLocaleString('en-US', { hour: 'numeric', minute: 'numeric', second: 'numeric', hour12: true });
     let bot_info = (
         `${bot.botInfo.first_name}\n` + 
@@ -77,7 +79,9 @@ bot.init().then(async() => {
     console.log(bot_info);
     channel_log(bot_info);
     startAdsRotator(bot);
-    startClientsList(bot);
+    console.log("[BOOT] calling startAutoPostClients");
+    startAutoPostClients(bot);
+    console.log("[BOOT] returned from startAutoPostClients");
 });
 
 async function exitSignal(signal: String) {

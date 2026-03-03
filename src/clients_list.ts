@@ -106,57 +106,64 @@ async function postClients(api: any, targetChatId: number, deletePrevious: boole
 
 // ── Scheduler ──────────────────────────────────────────────────────────────
 
-export function startClientsList<C extends Context>(bot: Bot<C>): void {
-    const enabled = constants.CLIENTS_ENABLED === "true";
-    if (!enabled) return;
+export function startAutoPostClients<C extends Context>(bot: Bot<C>): void {
+    console.log("[ClientsAuto] entered");
+    try {
+        const enabled = constants.CLIENTS_ENABLED === "true";
+        if (!enabled) return;
 
-    const targetChatId = Number(constants.CLIENTS_TARGET_CHAT_ID);
-    const repostHours = Number(constants.CLIENTS_REPOST_HOURS || "2");
-    const deletePrevious = constants.CLIENTS_DELETE_PREVIOUS !== "false";
-    const fireOnStart = constants.CLIENTS_FIRE_ON_START !== "false"; // default true
+        const targetChatId = Number(constants.CLIENTS_TARGET_CHAT_ID);
+        const repostHours = Number(constants.CLIENTS_REPOST_HOURS || "2");
+        const deletePrevious = constants.CLIENTS_DELETE_PREVIOUS !== "false";
+        const fireOnStart = constants.CLIENTS_FIRE_ON_START !== "false"; // default true
 
-    if (!targetChatId) {
-        console.error(
-            "[ClientsList] CLIENTS_ENABLED=true but CLIENTS_TARGET_CHAT_ID is missing. Disabled."
-        );
-        return;
-    }
-
-    if (repostHours <= 0 || !Number.isFinite(repostHours)) {
-        console.error("[ClientsList] CLIENTS_REPOST_HOURS must be a positive number. Disabled.");
-        return;
-    }
-
-    ensureDataDir();
-
-    let busy = false;
-
-    const run = async () => {
-        if (busy) {
-            console.log("[ClientsList] Previous post still in progress, skipping.");
+        if (!targetChatId) {
+            console.error(
+                "[ClientsList] CLIENTS_ENABLED=true but CLIENTS_TARGET_CHAT_ID is missing. Disabled."
+            );
             return;
         }
-        busy = true;
-        try {
-            await postClients(bot.api, targetChatId, deletePrevious);
-        } catch (err) {
-            console.error("[ClientsList] Failed to post clients:", err);
-        } finally {
-            busy = false;
+
+        if (repostHours <= 0 || !Number.isFinite(repostHours)) {
+            console.error("[ClientsList] CLIENTS_REPOST_HOURS must be a positive number. Disabled.");
+            return;
         }
-    };
 
-    if (fireOnStart) {
-        run();
+        ensureDataDir();
+
+        let busy = false;
+
+        const run = async () => {
+            if (busy) {
+                console.log("[ClientsList] Previous post still in progress, skipping.");
+                return;
+            }
+            busy = true;
+            try {
+                await postClients(bot.api, targetChatId, deletePrevious);
+            } catch (err) {
+                console.error("[ClientsList] Failed to post clients:", err);
+            } finally {
+                busy = false;
+            }
+        };
+
+        if (fireOnStart) {
+            run();
+        }
+
+        setInterval(run, repostHours * 60 * 60 * 1000);
+
+        console.log(
+            `[ClientsList] Started. Posting to ${targetChatId} every ${repostHours}h.` +
+            (fireOnStart ? " (firing immediately on start)" : "")
+        );
+    } catch (err) {
+        console.error("[ClientsAuto] error", err);
     }
-
-    setInterval(run, repostHours * 60 * 60 * 1000);
-
-    console.log(
-        `[ClientsList] Started. Posting to ${targetChatId} every ${repostHours}h.` +
-        (fireOnStart ? " (firing immediately on start)" : "")
-    );
 }
+
+export const startClientsList = startAutoPostClients;
 
 // ── Admin commands Composer ────────────────────────────────────────────────
 
