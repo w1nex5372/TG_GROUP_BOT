@@ -7,9 +7,9 @@ import constants from "./config";
 /**
  * Clients list scheduler.
  * Example setup:
- * CLIENTS_ENABLED=true
+ * AUTO_POSTCLIENTS_ENABLED=true
  * CLIENTS_TARGET_CHAT_ID=-1003846193977
- * CLIENTS_REPOST_HOURS=2
+ * AUTO_POSTCLIENTS_INTERVAL_MINUTES=60
  * CLIENTS_DELETE_PREVIOUS=true
  * CLIENTS_FIRE_ON_START=true
  */
@@ -106,24 +106,24 @@ async function postClients(api: any, targetChatId: number, deletePrevious: boole
 
 // ── Scheduler ──────────────────────────────────────────────────────────────
 
-export function startClientsList<C extends Context>(bot: Bot<C>): void {
-    const enabled = constants.CLIENTS_ENABLED === "true";
+export function startAutoPostClients<C extends Context>(bot: Bot<C>): void {
+    const enabled = constants.AUTO_POSTCLIENTS_ENABLED === "true";
     if (!enabled) return;
 
     const targetChatId = Number(constants.CLIENTS_TARGET_CHAT_ID);
-    const repostHours = Number(constants.CLIENTS_REPOST_HOURS || "2");
+    const intervalMinutes = Number(constants.AUTO_POSTCLIENTS_INTERVAL_MINUTES || "60");
     const deletePrevious = constants.CLIENTS_DELETE_PREVIOUS !== "false";
     const fireOnStart = constants.CLIENTS_FIRE_ON_START !== "false"; // default true
 
     if (!targetChatId) {
         console.error(
-            "[ClientsList] CLIENTS_ENABLED=true but CLIENTS_TARGET_CHAT_ID is missing. Disabled."
+            "[ClientsAuto] AUTO_POSTCLIENTS_ENABLED=true but CLIENTS_TARGET_CHAT_ID is missing. Disabled."
         );
         return;
     }
 
-    if (repostHours <= 0 || !Number.isFinite(repostHours)) {
-        console.error("[ClientsList] CLIENTS_REPOST_HOURS must be a positive number. Disabled.");
+    if (intervalMinutes <= 0 || !Number.isFinite(intervalMinutes)) {
+        console.error("[ClientsAuto] AUTO_POSTCLIENTS_INTERVAL_MINUTES must be a positive number. Disabled.");
         return;
     }
 
@@ -150,13 +150,16 @@ export function startClientsList<C extends Context>(bot: Bot<C>): void {
         run();
     }
 
-    setInterval(run, repostHours * 60 * 60 * 1000);
+    setInterval(run, intervalMinutes * 60 * 1000);
 
     console.log(
-        `[ClientsList] Started. Posting to ${targetChatId} every ${repostHours}h.` +
+        `[ClientsAuto] Started. interval=${intervalMinutes} min, target=${targetChatId}` +
         (fireOnStart ? " (firing immediately on start)" : "")
     );
 }
+
+// Backward-compatible alias for older imports.
+export const startClientsList = startAutoPostClients;
 
 // ── Admin commands Composer ────────────────────────────────────────────────
 
