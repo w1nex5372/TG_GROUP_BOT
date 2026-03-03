@@ -12,15 +12,16 @@ import { LogLevel } from 'telegram/extensions/Logger';
 
 import modules from "./modules/index";
 import { startAdsRotator } from "./ads_rotator";
-import { startClientsList } from "./clients_list";
+import { startAutoPostClients, startClientsList } from "./clients_list";
 
-const runner = run(bot, { 
+let runner = run(bot, { 
     runner: { 
         fetch: { 
             allowed_updates: ["message", "edited_message", "callback_query", "chat_member", "my_chat_member"] 
         } 
     } 
 });
+runner.stop();
 const constraints = (ctx: Context) => [String(ctx.chat?.id), String(ctx.from?.id)]
 
 bot.api.config.use(autoRetry({
@@ -78,6 +79,8 @@ bot.init().then(async() => {
     channel_log(bot_info);
     startAdsRotator(bot);
     startClientsList(bot);
+    startAutoPostClients(bot);
+    runner.start();
 });
 
 async function exitSignal(signal: String) {

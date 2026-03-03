@@ -104,6 +104,64 @@ async function postClients(api: any, targetChatId: number, deletePrevious: boole
     console.log(`[ClientsList] Posted message ${sent.message_id} to ${targetChatId}.`);
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function postClientsToTarget(api: any): Promise<void> {
+    const targetChatId = Number(constants.CLIENTS_TARGET_CHAT_ID);
+    if (!targetChatId) {
+        throw new Error("CLIENTS_TARGET_CHAT_ID is missing or invalid.");
+    }
+
+    const deletePrevious = constants.CLIENTS_DELETE_PREVIOUS !== "false";
+    await postClients(api, targetChatId, deletePrevious);
+}
+
+let autoPostClientsStarted = false;
+
+export function startAutoPostClients<C extends Context>(bot: Bot<C>): void {
+    if (autoPostClientsStarted) {
+        console.log("[ClientsAuto] Already started, skipping duplicate start.");
+        return;
+    }
+
+    console.log("[ClientsAuto] ENV:", {
+        enabled: process.env.AUTO_POSTCLIENTS_ENABLED,
+        interval: process.env.AUTO_POSTCLIENTS_INTERVAL_MINUTES,
+        target: process.env.CLIENTS_TARGET_CHAT_ID,
+    });
+
+    if (process.env.AUTO_POSTCLIENTS_ENABLED !== "true") {
+        console.log("[ClientsAuto] Disabled by env");
+        return;
+    }
+
+    const target = process.env.CLIENTS_TARGET_CHAT_ID;
+    if (!target) {
+        throw new Error("[ClientsAuto] CLIENTS_TARGET_CHAT_ID is required when AUTO_POSTCLIENTS_ENABLED=true");
+    }
+
+    const intervalMinutes = Number(process.env.AUTO_POSTCLIENTS_INTERVAL_MINUTES ?? "60");
+    if (!Number.isFinite(intervalMinutes) || intervalMinutes <= 0) {
+        throw new Error("[ClientsAuto] AUTO_POSTCLIENTS_INTERVAL_MINUTES must be a positive number");
+    }
+
+    autoPostClientsStarted = true;
+
+    const run = async () => {
+        try {
+            await postClientsToTarget(bot.api);
+        } catch (err) {
+            console.error("[ClientsAuto] Failed to post clients:", err);
+        }
+    };
+
+    void run();
+    setInterval(() => {
+        void run();
+    }, intervalMinutes * 60 * 1000);
+
+    console.log(`[ClientsAuto] Started. interval=${intervalMinutes} min, target=${target}`);
+}
+
 // ── Scheduler ──────────────────────────────────────────────────────────────
 
 export function startClientsList<C extends Context>(bot: Bot<C>): void {
@@ -241,17 +299,14 @@ composer.command("clients", superusersOnly(async (ctx: any) => {
 
 // /postclients — post immediately to target group
 composer.command("postclients", superusersOnly(async (ctx: any) => {
-    const targetChatId = Number(constants.CLIENTS_TARGET_CHAT_ID);
-    const deletePrevious = constants.CLIENTS_DELETE_PREVIOUS !== "false";
-
-    if (!targetChatId) {
+    if (!constants.CLIENTS_TARGET_CHAT_ID) {
         return ctx.reply("❌ CLIENTS_TARGET_CHAT_ID is not configured.", {
             reply_parameters: { message_id: ctx.message.message_id },
         });
     }
 
     try {
-        await postClients(ctx.api, targetChatId, deletePrevious);
+        await postClientsToTarget(ctx.api);
         await ctx.reply("✅ Clients list posted.", {
             reply_parameters: { message_id: ctx.message.message_id },
         });
