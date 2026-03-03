@@ -109,23 +109,39 @@ async function postClients(api: any, targetChatId: number, deletePrevious: boole
 export function startAutoPostClients<C extends Context>(bot: Bot<C>): void {
     console.log("[ClientsAuto] entered");
     try {
-        const enabled = constants.CLIENTS_ENABLED === "true";
-        if (!enabled) return;
+        const enabledRaw = process.env.AUTO_POSTCLIENTS_ENABLED;
+        const intervalRaw = process.env.AUTO_POSTCLIENTS_INTERVAL_MINUTES;
+        const targetRaw = process.env.CLIENTS_TARGET_CHAT_ID;
 
-        const targetChatId = Number(constants.CLIENTS_TARGET_CHAT_ID);
-        const repostHours = Number(constants.CLIENTS_REPOST_HOURS || "2");
-        const deletePrevious = constants.CLIENTS_DELETE_PREVIOUS !== "false";
-        const fireOnStart = constants.CLIENTS_FIRE_ON_START !== "false"; // default true
+        console.log("[ClientsAuto] ENV", {
+            enabled: enabledRaw,
+            interval: intervalRaw,
+            target: targetRaw,
+        });
 
-        if (!targetChatId) {
-            console.error(
-                "[ClientsList] CLIENTS_ENABLED=true but CLIENTS_TARGET_CHAT_ID is missing. Disabled."
-            );
+        const enabled = enabledRaw === "true";
+        if (!enabled) {
+            console.log("[ClientsAuto] Disabled by env");
             return;
         }
 
-        if (repostHours <= 0 || !Number.isFinite(repostHours)) {
-            console.error("[ClientsList] CLIENTS_REPOST_HOURS must be a positive number. Disabled.");
+        const intervalMinutes = Number(intervalRaw);
+        if (!Number.isFinite(intervalMinutes) || intervalMinutes <= 0) {
+            console.log("[ClientsAuto] Invalid interval");
+            return;
+        }
+
+        if (!targetRaw) {
+            console.log("[ClientsAuto] Missing CLIENTS_TARGET_CHAT_ID");
+            throw new Error("CLIENTS_TARGET_CHAT_ID is required when AUTO_POSTCLIENTS_ENABLED=true");
+        }
+
+        const targetChatId = Number(targetRaw);
+        const deletePrevious = constants.CLIENTS_DELETE_PREVIOUS !== "false";
+        const fireOnStart = constants.CLIENTS_FIRE_ON_START !== "false"; // default true
+
+        if (!Number.isFinite(targetChatId)) {
+            console.error("[ClientsList] CLIENTS_TARGET_CHAT_ID must be a valid number. Disabled.");
             return;
         }
 
@@ -152,12 +168,17 @@ export function startAutoPostClients<C extends Context>(bot: Bot<C>): void {
             run();
         }
 
-        setInterval(run, repostHours * 60 * 60 * 1000);
+        const intervalMs = intervalMinutes * 60 * 1000;
+        const intervalHandle = setInterval(() => {
+            console.log("[ClientsAuto] Tick");
+            void run();
+        }, intervalMs);
 
         console.log(
-            `[ClientsList] Started. Posting to ${targetChatId} every ${repostHours}h.` +
+            `[ClientsList] Started. Posting to ${targetChatId} every ${intervalMinutes}m.` +
             (fireOnStart ? " (firing immediately on start)" : "")
         );
+        console.log("[ClientsAuto] Timer created", { intervalMs, active: Boolean(intervalHandle) });
     } catch (err) {
         console.error("[ClientsAuto] error", err);
     }
