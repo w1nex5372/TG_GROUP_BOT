@@ -17,17 +17,31 @@ export function startAdsRotator<C extends Context>(bot: Bot<C>): void {
     const enabled = process.env.ADS_ENABLED === "true";
     if (!enabled) return;
 
-    const sourceChatId = Number(process.env.ADS_SOURCE_CHAT_ID);
+    const sourceChatIdRaw = (process.env.ADS_SOURCE_CHAT_ID || "").trim();
+    const targetChatIdRaw = (process.env.ADS_TARGET_CHAT_ID || "").trim();
+    const sourceMessageIdsRaw = (process.env.ADS_SOURCE_MESSAGE_IDS || "").trim();
+    const sourceMessageIdLegacyRaw = (process.env.ADS_SOURCE_MESSAGE_ID || "").trim();
+
+    const hasMessageSource = Boolean(sourceMessageIdsRaw || sourceMessageIdLegacyRaw);
+    if (!sourceChatIdRaw || !targetChatIdRaw || !hasMessageSource) {
+        console.error(
+            "[AdsRotator] ADS_ENABLED=true but one or more required vars are missing: " +
+            "ADS_SOURCE_CHAT_ID, ADS_TARGET_CHAT_ID, and (ADS_SOURCE_MESSAGE_IDS or ADS_SOURCE_MESSAGE_ID). Rotator disabled."
+        );
+        return;
+    }
+
+    const sourceChatId = Number(sourceChatIdRaw);
     const sourceMessageIds = parseSourceMessageIds();
-    const targetChatId = Number(process.env.ADS_TARGET_CHAT_ID);
+    const targetChatId = Number(targetChatIdRaw);
     const intervalMinutes = Number(process.env.ADS_INTERVAL_MINUTES || "30");
     const spacingSeconds = Number(process.env.ADS_SPACING_SECONDS || "300");
     const fireOnStart = process.env.ADS_FIRE_ON_START === "true";
 
     if (!sourceChatId || sourceMessageIds.length === 0 || !targetChatId) {
         console.error(
-            "[AdsRotator] ADS_ENABLED=true but one or more required vars are missing: " +
-            "ADS_SOURCE_CHAT_ID, ADS_SOURCE_MESSAGE_IDS (or ADS_SOURCE_MESSAGE_ID), ADS_TARGET_CHAT_ID. Rotator disabled."
+            "[AdsRotator] ADS_ENABLED=true but one or more ad identifiers are invalid. " +
+            "Check ADS_SOURCE_CHAT_ID, ADS_TARGET_CHAT_ID, and ADS_SOURCE_MESSAGE_IDS/ADS_SOURCE_MESSAGE_ID. Rotator disabled."
         );
         return;
     }
