@@ -1,0 +1,53 @@
+services:
+  bot:
+    build: .
+    container_name: lucynabot
+    restart: unless-stopped
+    env_file: .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - botnet
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: lucyna_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: lucyna
+      POSTGRES_PASSWORD: pass
+      POSTGRES_DB: lucyna
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U lucyna"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - botnet
+
+  redis:
+    image: redis:7-alpine
+    container_name: lucyna_redis
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - botnet
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  botnet:
+    driver: bridge

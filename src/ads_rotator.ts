@@ -15,12 +15,26 @@ function parseSourceMessageIds(): number[] {
 
 export function startAdsRotator<C extends Context>(bot: Bot<C>): void {
     const enabled = process.env.ADS_ENABLED === "true";
-    if (!enabled) return;
-
     const sourceChatIdRaw = (process.env.ADS_SOURCE_CHAT_ID || "").trim();
     const targetChatIdRaw = (process.env.ADS_TARGET_CHAT_ID || "").trim();
     const sourceMessageIdsRaw = (process.env.ADS_SOURCE_MESSAGE_IDS || "").trim();
     const sourceMessageIdLegacyRaw = (process.env.ADS_SOURCE_MESSAGE_ID || "").trim();
+    const intervalMinutesRaw = process.env.ADS_INTERVAL_MINUTES || "30";
+    const spacingSecondsRaw = process.env.ADS_SPACING_SECONDS || "300";
+    const fireOnStartRaw = process.env.ADS_FIRE_ON_START === "true";
+
+    console.log("[AdsRotator] ENV:", {
+        enabled,
+        sourceChatIdRaw,
+        targetChatIdRaw,
+        sourceMessageIdsRaw,
+        sourceMessageIdLegacyRaw,
+        intervalMinutes: intervalMinutesRaw,
+        spacingSeconds: spacingSecondsRaw,
+        fireOnStart: fireOnStartRaw,
+    });
+
+    if (!enabled) return;
 
     const hasMessageSource = Boolean(sourceMessageIdsRaw || sourceMessageIdLegacyRaw);
     if (!sourceChatIdRaw || !targetChatIdRaw || !hasMessageSource) {
@@ -34,9 +48,9 @@ export function startAdsRotator<C extends Context>(bot: Bot<C>): void {
     const sourceChatId = Number(sourceChatIdRaw);
     const sourceMessageIds = parseSourceMessageIds();
     const targetChatId = Number(targetChatIdRaw);
-    const intervalMinutes = Number(process.env.ADS_INTERVAL_MINUTES || "30");
-    const spacingSeconds = Number(process.env.ADS_SPACING_SECONDS || "300");
-    const fireOnStart = process.env.ADS_FIRE_ON_START === "true";
+    const intervalMinutes = Number(intervalMinutesRaw);
+    const spacingSeconds = Number(spacingSecondsRaw);
+    const fireOnStart = fireOnStartRaw;
 
     if (!sourceChatId || sourceMessageIds.length === 0 || !targetChatId) {
         console.error(

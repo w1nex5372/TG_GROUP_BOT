@@ -422,11 +422,8 @@ composer.chatType("private").command("start", (async(ctx: any) => {
         }
     }   
 
-    // if no payload, send the start message
-    else {
-        await ctx.react("🎉");
-        await ctx.api.sendAnimation(ctx.chat.id, constants.START_GIF, {caption: pm_start_text, reply_markup: start_menu, parse_mode: "HTML"});
-    }
+    // no payload — onboarding.ts handles this (shows guide menu)
+    // nothing to do here
 
     let username = null;
     if (ctx.from.username) {
@@ -453,7 +450,8 @@ composer.chatType(["supergroup", "group"]).command("start", (async(ctx: any) => 
 }));
 
 composer.chatType("private").command("help", (async(ctx: any) => {
-    await ctx.api.sendAnimation(ctx.chat.id, constants.START_GIF, {caption: help_text, reply_markup: help_submenu, parse_mode: "HTML"});
+    const kb = new InlineKeyboard().url("🆘 Susisiekti su adminu", "https://t.me/Bishopas777");
+    await ctx.reply("Pagalba:", { reply_markup: kb });
 }));
 
 composer.chatType(["supergroup", "group"]).command("help", (async(ctx: any) => {

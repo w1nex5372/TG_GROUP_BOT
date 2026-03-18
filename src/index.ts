@@ -13,6 +13,7 @@ import { LogLevel } from 'telegram/extensions/Logger';
 import modules from "./modules/index";
 import { startAdsRotator } from "./ads_rotator";
 import { startAutoPostClients } from "./clients_list";
+import { startQueueScheduler } from "./services/ads_queue";
 
 const runner = run(bot, { 
     runner: { 
@@ -79,9 +80,9 @@ bot.init().then(async() => {
     console.log(bot_info);
     channel_log(bot_info);
     startAdsRotator(bot);
-    console.log("[BOOT] calling startAutoPostClients");
     startAutoPostClients(bot);
-    console.log("[BOOT] returned from startAutoPostClients");
+    startQueueScheduler();
+    console.log("[BOOT] schedulers initialized");
 });
 
 async function exitSignal(signal: String) {

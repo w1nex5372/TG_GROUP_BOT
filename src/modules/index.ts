@@ -1,5 +1,7 @@
 import admin from './admin';
+import ads from './ads';
 import clientsList from '../clients_list';
+import onboarding from './onboarding';
 import afk from './afk';
 import anilist from "./anilist";
 import antiflood from './antiflood';
@@ -22,6 +24,7 @@ import mutes from './mutes';
 import notes from './notes';
 import purges from './purges';
 import reports from './reports';
+import referrals from './referrals';
 import rules from './rules';
 import start from './start';
 import test from './test';
@@ -35,6 +38,7 @@ import { Composer } from "grammy";
 const composer = new Composer();
 
 composer.use(
+    ads,
     clientsList,
     admin,
     afk,
@@ -57,7 +61,9 @@ composer.use(
     notes,
     purges,
     reports,
+    referrals,
     rules,
+    onboarding,
     start,
     test,
     users,

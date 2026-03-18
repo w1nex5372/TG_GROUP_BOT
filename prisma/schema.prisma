@@ -422,7 +422,30 @@ model userinfo {
 model users {
   user_id      BigInt         @id @default(autoincrement())
   username     String?
+  ref_code     String?        @unique
+  referred_by  BigInt?
+  created_at   DateTime       @default(now())
+  points       Int            @default(0)
   chat_members chat_members[]
+}
+
+model Setting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
+}
+
+model referral_events {
+  id           Int       @id @default(autoincrement())
+  referrer_id  BigInt
+  referred_id  BigInt    @unique
+  pending      Boolean   @default(true)
+  created_at   DateTime  @default(now())
+  expires_at   DateTime?
+  confirmed_at DateTime?
+  invite_link  String?   // per-user generated Telegram invite link
+
+  @@index([referrer_id])
 }
 
 model warn_filters {
@@ -495,4 +518,30 @@ model user_characters {
   created_at      DateTime @default(now())
 
   @@id([user_id, type])
+}
+
+model ad_drafts {
+  id                 Int       @id @default(autoincrement())
+  created_by         BigInt
+  source_chat_id     String?
+  source_message_id  BigInt?
+  content_type       String
+  text               String?
+  caption            String?
+  media_file_id      String?
+  button_text        String?
+  button_url         String?
+  second_button_text String?
+  second_button_url  String?
+  target_chat_id     String
+  status             String    @default("draft")
+  created_at         DateTime  @default(now())
+  updated_at         DateTime  @updatedAt
+  published_at                DateTime?
+  published_message_id        BigInt?
+  published_chat_id           String?
+  queued_at                   DateTime?
+  approved_at                 DateTime?
+  ad_mode                     String    @default("normal")
+  rotation_last_published_at  DateTime?
 }

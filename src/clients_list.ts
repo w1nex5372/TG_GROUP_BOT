@@ -39,7 +39,7 @@ function ensureDataDir(): void {
     }
 }
 
-function loadClients(): Client[] {
+export function loadClients(): Client[] {
     try {
         return JSON.parse(fs.readFileSync(CLIENTS_FILE, "utf8"));
     } catch {
@@ -67,14 +67,20 @@ function saveState(state: ClientsState): void {
 
 // ── Message builder ────────────────────────────────────────────────────────
 
-function buildPayload(clients: Client[]): { text: string; keyboard: InlineKeyboard } {
-    const text = "✅ PATVIRTINTI NARIAI\nPaspausk mygtuką ir atidarysi chatą:";
+export function buildClientsKeyboard(clients: Client[]): InlineKeyboard {
     const keyboard = new InlineKeyboard();
     for (const client of clients) {
         const username = client.username.replace(/^@/, "");
         keyboard.url(client.label, `https://t.me/${username}`).row();
     }
-    return { text, keyboard };
+    return keyboard;
+}
+
+export function buildPayload(clients: Client[]): { text: string; keyboard: InlineKeyboard } {
+    return {
+        text: "✅ Patvirtinti nariai\n\nPaspausk mygtuką ir atsidarysi chatą:",
+        keyboard: buildClientsKeyboard(clients),
+    };
 }
 
 // ── Core post function (internal, takes raw api object) ───────────────────
@@ -106,61 +112,66 @@ async function postClients(api: any, targetChatId: number, deletePrevious: boole
 
 // ── Scheduler ──────────────────────────────────────────────────────────────
 
+let autoPostStarted = false;
+
 export function startAutoPostClients<C extends Context>(bot: Bot<C>): void {
-    console.log("[ClientsAuto] entered");
-    try {
-        const enabled = constants.CLIENTS_ENABLED === "true";
-        if (!enabled) return;
+    const enabled = constants.AUTO_POSTCLIENTS_ENABLED === "true";
+    const intervalMinutes = Number(constants.AUTO_POSTCLIENTS_INTERVAL_MINUTES || "15");
+    const targetChatId = Number(constants.CLIENTS_TARGET_CHAT_ID);
+    const deletePrevious = constants.CLIENTS_DELETE_PREVIOUS !== "false";
+    const fireOnStart = constants.CLIENTS_FIRE_ON_START !== "false";
 
-        const targetChatId = Number(constants.CLIENTS_TARGET_CHAT_ID);
-        const repostHours = Number(constants.CLIENTS_REPOST_HOURS || "2");
-        const deletePrevious = constants.CLIENTS_DELETE_PREVIOUS !== "false";
-        const fireOnStart = constants.CLIENTS_FIRE_ON_START !== "false"; // default true
+    console.log("[ClientsAuto] ENV:", { enabled, intervalMinutes, targetChatId, deletePrevious, fireOnStart });
 
-        if (!targetChatId) {
-            console.error(
-                "[ClientsList] CLIENTS_ENABLED=true but CLIENTS_TARGET_CHAT_ID is missing. Disabled."
-            );
-            return;
-        }
-
-        if (repostHours <= 0 || !Number.isFinite(repostHours)) {
-            console.error("[ClientsList] CLIENTS_REPOST_HOURS must be a positive number. Disabled.");
-            return;
-        }
-
-        ensureDataDir();
-
-        let busy = false;
-
-        const run = async () => {
-            if (busy) {
-                console.log("[ClientsList] Previous post still in progress, skipping.");
-                return;
-            }
-            busy = true;
-            try {
-                await postClients(bot.api, targetChatId, deletePrevious);
-            } catch (err) {
-                console.error("[ClientsList] Failed to post clients:", err);
-            } finally {
-                busy = false;
-            }
-        };
-
-        if (fireOnStart) {
-            run();
-        }
-
-        setInterval(run, repostHours * 60 * 60 * 1000);
-
-        console.log(
-            `[ClientsList] Started. Posting to ${targetChatId} every ${repostHours}h.` +
-            (fireOnStart ? " (firing immediately on start)" : "")
-        );
-    } catch (err) {
-        console.error("[ClientsAuto] error", err);
+    if (!enabled) {
+        console.log("[ClientsAuto] Disabled by env");
+        return;
     }
+
+    if (autoPostStarted) {
+        console.log("[ClientsAuto] Already started, skipping duplicate call.");
+        return;
+    }
+
+    if (!targetChatId || !Number.isFinite(targetChatId)) {
+        throw new Error("[ClientsAuto] CLIENTS_TARGET_CHAT_ID is required when AUTO_POSTCLIENTS_ENABLED=true");
+    }
+
+    if (intervalMinutes <= 0 || !Number.isFinite(intervalMinutes)) {
+        throw new Error("[ClientsAuto] AUTO_POSTCLIENTS_INTERVAL_MINUTES must be a positive number");
+    }
+
+    autoPostStarted = true;
+    ensureDataDir();
+
+    let busy = false;
+
+    const tick = async () => {
+        console.log("[ClientsAuto] Tick");
+        if (busy) {
+            console.log("[ClientsAuto] Previous post still in progress, skipping.");
+            return;
+        }
+        busy = true;
+        try {
+            await postClients(bot.api, targetChatId, deletePrevious);
+        } catch (err) {
+            console.error("[ClientsAuto] Failed to post clients:", err);
+        } finally {
+            busy = false;
+        }
+    };
+
+    if (fireOnStart) {
+        void tick();
+    }
+
+    setInterval(tick, intervalMinutes * 60 * 1000);
+
+    console.log(
+        `[ClientsAuto] Started. interval=${intervalMinutes} min, target=${targetChatId}` +
+        (fireOnStart ? " (firing immediately on start)" : "")
+    );
 }
 
 export const startClientsList = startAutoPostClients;

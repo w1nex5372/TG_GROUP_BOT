@@ -7,22 +7,7 @@ import { elevatedUsersOnly } from "../helpers/helper_func";
 const composer = new Composer();
 
 composer.chatType(["supergroup", "group"]).command(["rule", "rules"], (async(ctx: any) => {
-    let chatId = ctx.chat.id.toString();
-    let rules_button = new InlineKeyboard()
-        .url("Rules❕", `https://telegram.me/${constants.BOT_USERNAME}?start=rules_${chatId}`);
-    let rules = await get_rules(chatId);
-    if (rules == null) {
-        await ctx.reply("No rules have been set yet!", {reply_parameters: {message_id: ctx.message.message_id}});
-        return;
-    }
-    else { 
-        if (ctx.message.reply_to_message == undefined) {
-            await ctx.reply("Read the group rules via button below.", {reply_markup: rules_button, reply_parameters: {message_id: ctx.message.message_id}, parse_mode: "HTML"});
-        }
-        else {
-            await ctx.reply("Read the group rules via button below.", {reply_markup: rules_button, reply_parameters: {message_id: ctx.message.reply_to_message.message_id}, parse_mode: "HTML" });
-        }
-    }
+    await ctx.reply("📌 Grupės taisyklės\n\n❌ Reklama be leidimo – draudžiama\n❌ Linkai ir referral'ai – draudžiami\n❌ Spam / flood – mute arba ban\n\n✅ Reklama galima tik su admin leidimu", {reply_parameters: {message_id: ctx.message.message_id}});
 }));
 
 composer.chatType(["supergroup", "group"]).command(["setrule", "setrules", "addrule", "addrules"], elevatedUsersOnly(async(ctx: any) => {

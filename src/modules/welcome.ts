@@ -471,7 +471,9 @@ composer.on("my_chat_member", async (ctx: any, next) => {
         return new Date().toLocaleString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });
     };
 
-    // bot is added
+    // bot is added (skip private chats — user opening DM triggers this too)
+    if (chat.type === "private") return next();
+
     if ((oldStatus === "left" || oldStatus === "kicked") && (newStatus === "member" || newStatus === "administrator")) {
         let log_message = (
             `${ctx.me.first_name}\n` + 
