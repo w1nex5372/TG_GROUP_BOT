@@ -448,6 +448,16 @@ model referral_events {
   @@index([referrer_id])
 }
 
+model direct_invite_events {
+  id             Int       @id @default(autoincrement())
+  inviter_id     BigInt
+  invited_id     BigInt    @unique
+  created_at     DateTime  @default(now())
+  bot_started_at DateTime?
+
+  @@index([inviter_id])
+}
+
 model warn_filters {
   chat_id String @db.VarChar(14)
   keyword String

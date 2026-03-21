@@ -114,6 +114,31 @@ export async function getTotalConfirmedCount(referrerId: bigint): Promise<number
     });
 }
 
+// ── direct_invite_events helpers ──────────────────────────────────────────────
+
+export async function getDirectInviteEvent(invitedId: bigint) {
+    return prisma.direct_invite_events.findUnique({ where: { invited_id: invitedId } });
+}
+
+export async function createDirectInviteEvent(inviterId: bigint, invitedId: bigint): Promise<void> {
+    await prisma.direct_invite_events.upsert({
+        where: { invited_id: invitedId },
+        update: {},
+        create: { inviter_id: inviterId, invited_id: invitedId },
+    });
+}
+
+export async function markDirectInviteBotStarted(invitedId: bigint): Promise<void> {
+    await prisma.direct_invite_events.updateMany({
+        where: { invited_id: invitedId, bot_started_at: null },
+        data: { bot_started_at: new Date() },
+    });
+}
+
+export async function getTotalDirectInviteCount(inviterId: bigint): Promise<number> {
+    return prisma.direct_invite_events.count({ where: { inviter_id: inviterId } });
+}
+
 // ── Points helpers ────────────────────────────────────────────────────────────
 
 /** Increment a user's points by `amount`. User row must already exist. */
@@ -177,7 +202,7 @@ export async function getUserStats(userId: bigint): Promise<{
     const botInvites = await prisma.referral_events.count({
         where: { referrer_id: userId },
     });
-    const groupInvites = await getTotalConfirmedCount(userId);
+    const groupInvites = await getTotalConfirmedCount(userId) + await getTotalDirectInviteCount(userId);
 
     if (points === 0) {
         return { points: 0, botInvites, groupInvites, rank: null, gap: null };

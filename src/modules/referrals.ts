@@ -16,6 +16,9 @@ import {
     resetReferral,
     updateReferralInviteLink,
     getReferralInviteLink,
+    getDirectInviteEvent,
+    createDirectInviteEvent,
+    markDirectInviteBotStarted,
 } from "../database/referrals_sql";
 import { getGroupInviteUrl, setSetting } from "../database/settings_sql";
 import { clearGuideState } from "./onboarding";
@@ -76,6 +79,45 @@ async function handleGroupJoin(userId: bigint, user: { id: number; username?: st
         console.log(`[Referrals] post-join menu sent -> user=${userId}`);
     } catch (err: any) {
         console.log(`[Referrals] could not send post-join menu to user=${userId}: ${err?.description ?? err}`);
+    }
+}
+
+// ── Direct group add tracking ─────────────────────────────────────────────────
+// Fires when an admin/member adds someone directly via "Add Members".
+// Ref-link joins take priority — if a referral_event already exists, skip.
+
+async function handleDirectAdd(
+    invitedId: bigint,
+    inviterId: bigint,
+    user: { id: number; username?: string; first_name: string },
+): Promise<void> {
+    if (inviterId === invitedId) return;
+
+    // Ref link takes priority
+    const refEvent = await getReferralEvent(invitedId);
+    if (refEvent) return;
+
+    // Idempotent — skip if already recorded
+    const existing = await getDirectInviteEvent(invitedId);
+    if (existing) return;
+
+    await createDirectInviteEvent(inviterId, invitedId);
+    console.log(`[DirectInvite] recorded: inviter=${inviterId} invited=${invitedId}`);
+
+    // Group join is already confirmed → +2 to inviter immediately
+    await addPoints(inviterId, 2);
+    console.log(`[Points] direct invite +2 -> inviter=${inviterId}`);
+
+    const displayName = user.username ? `@${user.username}` : user.first_name;
+    const totalPoints = await getUserPoints(inviterId);
+
+    try {
+        await bot.api.sendMessage(
+            Number(inviterId),
+            `✅ +2 taškai! ${displayName} buvo pakviesti į grupę. Iš viso: ${totalPoints} taškų`,
+        );
+    } catch (err: any) {
+        console.log(`[DirectInvite] could not notify inviter=${inviterId}: ${err?.description ?? err}`);
     }
 }
 
@@ -140,7 +182,23 @@ async function resolveJoinUrl(
 
 bot.chatType("private").command("start", async (ctx: any, next: () => Promise<void>) => {
     const payload: string = ctx.match ?? "";
-    if (!payload.startsWith("ref_")) return next();
+    if (!payload.startsWith("ref_")) {
+        // Welcome bonus for users who were directly added to the group
+        const userId = BigInt(ctx.from.id);
+        const username: string | null = ctx.from.username ?? null;
+        await prisma.users.upsert({
+            where: { user_id: userId },
+            update: { username },
+            create: { user_id: userId, username },
+        });
+        const directInvite = await getDirectInviteEvent(userId);
+        if (directInvite && !directInvite.bot_started_at) {
+            await markDirectInviteBotStarted(userId);
+            await addPoints(userId, 1);
+            console.log(`[Points] direct invite welcome +1 -> user=${userId}`);
+        }
+        return next();
+    }
 
     const code = payload.slice(4);
     const userId = BigInt(ctx.from.id);
@@ -258,9 +316,16 @@ composer.on("message:new_chat_members", async (ctx: any) => {
     if (!GROUP_ID || ctx.chat.id !== GROUP_ID) return;
 
     const newMembers: any[] = ctx.message.new_chat_members ?? [];
+    const fromId: bigint | null = ctx.message.from?.id ? BigInt(ctx.message.from.id) : null;
+
     for (const member of newMembers) {
         if (member.is_bot) continue;
-        await handleGroupJoin(BigInt(member.id), member);
+        const memberId = BigInt(member.id);
+        await handleGroupJoin(memberId, member);
+        // If added by someone else (not joined by themselves via link), track direct invite
+        if (fromId && fromId !== memberId && !ctx.message.from?.is_bot) {
+            await handleDirectAdd(memberId, fromId, member);
+        }
     }
 });
 
@@ -281,7 +346,14 @@ composer.on("chat_member", async (ctx: any) => {
 
     if (!wasAbsent || !isNowPresent) return;
 
-    await handleGroupJoin(BigInt(newMember.user.id), newMember.user);
+    const invitedId = BigInt(newMember.user.id);
+    await handleGroupJoin(invitedId, newMember.user);
+
+    // Detect direct add: from.id !== new_member.id means an admin added them
+    const from = ctx.chatMember.from;
+    if (from && !from.is_bot && BigInt(from.id) !== invitedId) {
+        await handleDirectAdd(invitedId, BigInt(from.id), newMember.user);
+    }
 });
 
 // ── /setgroupurl — registered on bot directly so it works in DM and group ────
