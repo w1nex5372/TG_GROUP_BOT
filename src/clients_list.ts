@@ -94,18 +94,20 @@ async function postClients(api: any, targetChatId: number, deletePrevious: boole
     }
 
     const state = loadState();
+    const { text, keyboard } = buildPayload(clients);
 
-    if (deletePrevious && state.lastMessageId) {
+    // Try to edit the existing message in place (keeps it in its original chat position)
+    if (state.lastMessageId) {
         try {
-            await api.deleteMessage(targetChatId, state.lastMessageId);
+            await api.editMessageText(targetChatId, state.lastMessageId, text, { reply_markup: keyboard });
+            console.log(`[ClientsList] Edited message ${state.lastMessageId} in ${targetChatId}.`);
+            return;
         } catch {
-            // Ignore: message may already be deleted or too old
+            // Message deleted or too old — fall through to send a new one
         }
     }
 
-    const { text, keyboard } = buildPayload(clients);
     const sent = await api.sendMessage(targetChatId, text, { reply_markup: keyboard });
-
     saveState({ lastMessageId: sent.message_id });
     console.log(`[ClientsList] Posted message ${sent.message_id} to ${targetChatId}.`);
 }

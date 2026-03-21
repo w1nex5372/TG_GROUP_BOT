@@ -50,7 +50,11 @@ export async function ensureRefCode(userId: bigint): Promise<string> {
         code = generateRefCode();
     }
 
-    await prisma.users.update({ where: { user_id: userId }, data: { ref_code: code } });
+    await prisma.users.upsert({
+        where: { user_id: userId },
+        update: { ref_code: code },
+        create: { user_id: userId, ref_code: code },
+    });
     return code;
 }
 

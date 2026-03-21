@@ -26,6 +26,10 @@ export const E = {
     invite:   "📣",
     share:    "📤",
 
+    // Games & Shop
+    spinwar:  "🎰",
+    shop:     "🛍️",
+
     // Medals
     gold:     "🥇",
     silver:   "🥈",
