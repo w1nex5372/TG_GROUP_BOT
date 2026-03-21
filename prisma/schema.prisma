@@ -420,13 +420,28 @@ model userinfo {
 }
 
 model users {
-  user_id      BigInt         @id @default(autoincrement())
-  username     String?
-  ref_code     String?        @unique
-  referred_by  BigInt?
-  created_at   DateTime       @default(now())
-  points       Int            @default(0)
-  chat_members chat_members[]
+  user_id       BigInt         @id @default(autoincrement())
+  username      String?
+  ref_code      String?        @unique
+  referred_by   BigInt?
+  created_at    DateTime       @default(now())
+  points        Int            @default(0)   // all-time points (never resets)
+  weekly_points Int            @default(0)   // resets every Monday after rewards
+  chat_members  chat_members[]
+}
+
+model weekly_winners {
+  id             Int      @id @default(autoincrement())
+  user_id        BigInt
+  username       String?
+  place          Int
+  weekly_points  Int
+  tokens_awarded Int
+  week_start     DateTime
+  awarded_at     DateTime @default(now())
+
+  @@index([user_id])
+  @@index([week_start])
 }
 
 model Setting {

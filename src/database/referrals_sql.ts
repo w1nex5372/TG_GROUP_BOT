@@ -141,11 +141,14 @@ export async function getTotalDirectInviteCount(inviterId: bigint): Promise<numb
 
 // ── Points helpers ────────────────────────────────────────────────────────────
 
-/** Increment a user's points by `amount`. User row must already exist. */
+/** Increment a user's points by `amount` (both all-time and weekly). User row must already exist. */
 export async function addPoints(userId: bigint, amount: number): Promise<void> {
     await prisma.users.update({
         where: { user_id: userId },
-        data: { points: { increment: amount } },
+        data: {
+            points:        { increment: amount },
+            weekly_points: { increment: amount },
+        },
     });
 }
 
@@ -158,21 +161,20 @@ export async function getUserPoints(userId: bigint): Promise<number> {
     return user?.points ?? 0;
 }
 
-// ── Leaderboard — ranked by points DESC ───────────────────────────────────────
+// ── Leaderboard — ranked by weekly_points DESC ────────────────────────────────
 // Tie-breaking: confirmed referrals DESC, then user_id ASC (deterministic).
 
 export async function getLeaderboard(): Promise<
-    { user_id: bigint; username: string | null; points: number }[]
+    { user_id: bigint; username: string | null; points: number; weekly_points: number }[]
 > {
-    // Raw query so we can sort by a subquery aggregate for tie-breaking.
     const rows = await prisma.$queryRaw<
-        { user_id: bigint; username: string | null; points: bigint | number }[]
+        { user_id: bigint; username: string | null; points: bigint | number; weekly_points: bigint | number }[]
     >`
-        SELECT u.user_id, u.username, u.points
+        SELECT u.user_id, u.username, u.points, u.weekly_points
         FROM   users u
-        WHERE  u.points > 0
+        WHERE  u.weekly_points > 0
         ORDER BY
-            u.points DESC,
+            u.weekly_points DESC,
             (SELECT COUNT(*) FROM referral_events re
              WHERE  re.referrer_id = u.user_id
                AND  re.pending     = false
@@ -180,7 +182,37 @@ export async function getLeaderboard(): Promise<
             u.user_id ASC
         LIMIT 10
     `;
-    return rows.map((r) => ({ ...r, points: Number(r.points) }));
+    return rows.map((r) => ({
+        ...r,
+        points:        Number(r.points),
+        weekly_points: Number(r.weekly_points),
+    }));
+}
+
+// ── Weekly reward helpers ──────────────────────────────────────────────────────
+
+/** Save weekly winners to history table. */
+export async function saveWeeklyWinners(
+    winners: { user_id: bigint; username: string | null; place: number; weekly_points: number; tokens_awarded: number }[],
+    weekStart: Date,
+): Promise<void> {
+    for (const w of winners) {
+        await prisma.$executeRaw`
+            INSERT INTO "weekly_winners"
+                ("user_id", "username", "place", "weekly_points", "tokens_awarded", "week_start")
+            VALUES
+                (${w.user_id}, ${w.username}, ${w.place}, ${w.weekly_points}, ${w.tokens_awarded}, ${weekStart})
+        `;
+    }
+}
+
+/** Reset all users' weekly_points to 0. */
+export async function resetWeeklyPoints(): Promise<number> {
+    const result = await prisma.users.updateMany({
+        where:  { weekly_points: { gt: 0 } },
+        data:   { weekly_points: 0 },
+    });
+    return result.count;
 }
 
 // ── /mystats helpers ──────────────────────────────────────────────────────────
@@ -192,31 +224,35 @@ export async function getLeaderboard(): Promise<
  */
 export async function getUserStats(userId: bigint): Promise<{
     points: number;
-    botInvites: number;    // referral events created (any status)
-    groupInvites: number;  // confirmed group joins
-    rank: number | null;   // null → 0 points, not in ranking
-    gap: number | null;    // null → rank #1 or not ranked
+    weekly_points: number;
+    botInvites: number;
+    groupInvites: number;
+    rank: number | null;        // weekly rank
+    gap: number | null;
 }> {
-    const points = await getUserPoints(userId);
-
-    const botInvites = await prisma.referral_events.count({
-        where: { referrer_id: userId },
+    const userRow = await prisma.users.findUnique({
+        where:  { user_id: userId },
+        select: { points: true, weekly_points: true },
     });
+    const points        = userRow?.points        ?? 0;
+    const weekly_points = userRow?.weekly_points ?? 0;
+
+    const botInvites   = await prisma.referral_events.count({ where: { referrer_id: userId } });
     const groupInvites = await getTotalConfirmedCount(userId) + await getTotalDirectInviteCount(userId);
 
-    if (points === 0) {
-        return { points: 0, botInvites, groupInvites, rank: null, gap: null };
+    if (weekly_points === 0) {
+        return { points, weekly_points: 0, botInvites, groupInvites, rank: null, gap: null };
     }
 
-    // Fetch all ranked users using the same ORDER BY as getLeaderboard (no LIMIT).
+    // Rank by weekly_points (same ORDER BY as getLeaderboard)
     const allRanked = await prisma.$queryRaw<
         { user_id: bigint; points: bigint | number }[]
     >`
-        SELECT u.user_id, u.points
+        SELECT u.user_id, u.weekly_points AS points
         FROM   users u
-        WHERE  u.points > 0
+        WHERE  u.weekly_points > 0
         ORDER BY
-            u.points DESC,
+            u.weekly_points DESC,
             (SELECT COUNT(*) FROM referral_events re
              WHERE  re.referrer_id = u.user_id
                AND  re.pending     = false
@@ -226,12 +262,12 @@ export async function getUserStats(userId: bigint): Promise<{
 
     const idx = allRanked.findIndex((r) => r.user_id === userId);
     if (idx === -1) {
-        return { points, botInvites, groupInvites, rank: null, gap: null };
+        return { points, weekly_points: 0, botInvites, groupInvites, rank: null, gap: null };
     }
 
     const rank = idx + 1;
-    const gap = rank > 1 ? Number(allRanked[idx - 1].points) - points : null;
-    return { points, botInvites, groupInvites, rank, gap };
+    const gap  = rank > 1 ? Number(allRanked[idx - 1].points) - weekly_points : null;
+    return { points, weekly_points, botInvites, groupInvites, rank, gap };
 }
 
 // ── XP / Level helpers ────────────────────────────────────────────────────────
@@ -403,7 +439,7 @@ function gapWord(n: number): string {
 
 /** Formats stats into a ready-to-send Lithuanian message string. */
 export async function buildStatsText(userId: bigint): Promise<string> {
-    const { groupInvites, rank, gap } = await getUserStats(userId);
+    const { points, weekly_points, groupInvites, rank, gap } = await getUserStats(userId);
 
     const xp       = groupInvites;
     const level    = getUserLevel(xp);
@@ -423,8 +459,10 @@ export async function buildStatsText(userId: bigint): Promise<string> {
         "📈 Progresas",
         buildProgressBar(xpIn, lvlRange),
         "",
-        `👥 Pakvietei: ${groupInvites} ${inv}`,
-        `🏅 Tavo vieta: ${rank !== null ? "#" + rank : "—"}`,
+        `📅 Šią savaitę: ${weekly_points} tšk  ·  🏅 Vieta: ${rank !== null ? "#" + rank : "—"}`,
+        `📊 Viso visų laikų: ${points} tšk`,
+        "",
+        `👥 Pakvietei iš viso: ${groupInvites} ${inv}`,
         "",
         "📊 Iki kito lygio:",
         `reikia dar ${xpToNext} ${invWord(xpToNext)}`,
@@ -438,9 +476,9 @@ export async function buildStatsText(userId: bigint): Promise<string> {
             `trūksta ${gap} ${gapWord(gap)}`,
         );
     } else if (rank === 1) {
-        lines.push("", "👑 Tu esi lyderis! Nepaleisk pirmosios vietos.");
+        lines.push("", "👑 Tu esi savaitės lyderis! Nepaleisk viršaus.");
     } else if (rank === null) {
-        lines.push("", "💬 Pakviesk pirmą draugą ir pradėk kelionę!");
+        lines.push("", "💬 Pakviesk draugą šią savaitę ir patekk į TOP!");
     }
 
     return lines.join("\n");

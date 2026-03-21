@@ -45,24 +45,26 @@ export function buildCommandsText(): string {
  * Shows top users ranked by points with medal emojis.
  */
 export function buildLeaderboardMessage(
-    rows: { user_id: bigint; username: string | null; points: number }[]
+    rows: { user_id: bigint; username: string | null; points: number; weekly_points?: number }[]
 ): string {
     if (rows.length === 0) {
         return (
-            `${E.stats} Kol kas lyderių nėra.\n\n` +
-            `Pakviesk pirmą draugą ir pateksi į sąrašą!`
+            `${E.stats} Šią savaitę lyderių dar nėra.\n\n` +
+            `Pakviesk draugą ir pateksi į sąrašą!`
         );
     }
     const medals = [E.gold, E.silver, E.bronze];
     const lines = rows.map((r, i) => {
         const name = r.username ? `@${r.username}` : `User ${r.user_id}`;
         const medal = medals[i] ?? `${i + 1}.`;
-        return `${medal} ${name} — ${r.points}`;
+        const pts = r.weekly_points ?? r.points;
+        return `${medal} ${name} — ${pts} tšk`;
     });
     return (
-        `${E.trophy} <b>TOP kvietėjai</b>\n\n` +
+        `${E.trophy} <b>TOP kvietėjai šią savaitę</b>\n\n` +
         lines.join("\n") +
-        `\n\n${DIVIDER}`
+        `\n\n${DIVIDER}\n` +
+        `🎁 Top 3 gauna tokenus kiekvieną pirmadienį!`
     );
 }
 
