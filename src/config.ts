@@ -56,6 +56,9 @@ const constants = cleanEnv(process.env, {
     REF_REQUIRE_GROUP_JOIN: str({ default: "true" }),
     REF_JOIN_WINDOW_HOURS: str({ default: "24" }),
     REF_DAILY_CAP: str({ default: "20" }),
+    // Weekly rewards
+    SPINWAR_DB_URL: str({ default: "" }),
+    WEEKLY_REWARDS_CRON: str({ default: "0 10 * * 1" }),
 });
 
 export default constants;
