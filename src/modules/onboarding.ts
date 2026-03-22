@@ -59,15 +59,11 @@ async function buildLeaderboardText(): Promise<string> {
 
 const backRow = buildBackRow();
 
-// Throttle: track last guide send time per user (in-memory, resets on restart)
-const guideLastSent = new Map<number, number>();
-// Track last sent menu message_id per user to prefer editing over sending new
+// Track last sent menu message_id per user
 const guideLastMsgId = new Map<number, number>();
-const GUIDE_THROTTLE_MS = 3_000;
 
 /** Clear in-memory guide state for a user (used by /resetref). */
 export function clearGuideState(userId: number): void {
-    guideLastSent.delete(userId);
     guideLastMsgId.delete(userId);
 }
 
@@ -76,18 +72,10 @@ composer.chatType("private").command("start", async (ctx: any, next: () => Promi
     if (ctx.match !== "guide" && ctx.match !== "") return next();
 
     const userId: number = ctx.from?.id;
-    const now = Date.now();
-
-    if (now - (guideLastSent.get(userId) ?? 0) < GUIDE_THROTTLE_MS) {
-        console.log(`[Onboarding] guide throttled -> user=${userId}`);
-        return;
-    }
-    guideLastSent.set(userId, now);
-
-    const inviteUrl = await getGroupInviteUrl();
-    const guideMenu = buildMainMenu(inviteUrl);
 
     try {
+        const inviteUrl = await getGroupInviteUrl();
+        const guideMenu = buildMainMenu(inviteUrl);
         const sent = await ctx.reply(GUIDE_MENU_TEXT, { reply_markup: guideMenu, parse_mode: "HTML" });
         guideLastMsgId.set(userId, sent.message_id);
         console.log(`[Onboarding] guide -> user=${userId}`);
