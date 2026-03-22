@@ -15,6 +15,7 @@ import { startAdsRotator } from "./ads_rotator";
 import { startAutoPostClients } from "./clients_list";
 import { startQueueScheduler } from "./services/ads_queue";
 import { startWeeklyRewards } from "./services/weekly_rewards";
+import { startPublisherBot } from "./services/ads_publisher";
 
 const runner = run(bot, { 
     runner: { 
@@ -84,6 +85,7 @@ bot.init().then(async() => {
     startAutoPostClients(bot);
     startQueueScheduler();
     startWeeklyRewards();
+    startPublisherBot();
     console.log("[BOOT] schedulers initialized");
 });
 

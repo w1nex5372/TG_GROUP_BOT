@@ -35,6 +35,28 @@ function getPublisherBot(): Bot {
     return publisherBot;
 }
 
+// ── Start publisher bot polling with /start handler ───────────────────────────
+
+export function startPublisherBot(): void {
+    if (!constants.ADS_PUBLISHER_BOT_TOKEN) return;
+
+    const pb = getPublisherBot();
+
+    pb.chatType("private").command("start", async (ctx) => {
+        const kb = new InlineKeyboard().url(
+            "📩 Atidaryti pagrindinį botą",
+            `https://t.me/${constants.BOT_USERNAME}?start=guide`
+        );
+        await ctx.reply(
+            `👋 Sveikas!\n\nŠis botas naudojamas reklamoms publikuoti.\n\nNori sužinoti daugiau ar gauti gidą? Spausk žemiau 👇`,
+            { reply_markup: kb }
+        );
+    });
+
+    pb.start();
+    console.log("[AdsPublisher] publisher bot polling started");
+}
+
 // ── Keyboard builder (duplicated here so service is self-contained) ───────────
 
 function buildAdKeyboard(draft: AdDraftLike): InlineKeyboard {
