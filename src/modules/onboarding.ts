@@ -63,7 +63,7 @@ const backRow = buildBackRow();
 const guideLastSent = new Map<number, number>();
 // Track last sent menu message_id per user to prefer editing over sending new
 const guideLastMsgId = new Map<number, number>();
-const GUIDE_THROTTLE_MS = 10_000;
+const GUIDE_THROTTLE_MS = 3_000;
 
 /** Clear in-memory guide state for a user (used by /resetref). */
 export function clearGuideState(userId: number): void {
@@ -88,16 +88,6 @@ composer.chatType("private").command("start", async (ctx: any, next: () => Promi
     const guideMenu = buildMainMenu(inviteUrl);
 
     try {
-        const existingMsgId = guideLastMsgId.get(userId);
-        if (existingMsgId) {
-            try {
-                await ctx.api.editMessageText(ctx.chat.id, existingMsgId, GUIDE_MENU_TEXT, { reply_markup: guideMenu, parse_mode: "HTML" });
-                console.log(`[Onboarding] guide edited -> user=${userId}`);
-                return;
-            } catch {
-                // Message deleted or too old — fall through to send new
-            }
-        }
         const sent = await ctx.reply(GUIDE_MENU_TEXT, { reply_markup: guideMenu, parse_mode: "HTML" });
         guideLastMsgId.set(userId, sent.message_id);
         console.log(`[Onboarding] guide -> user=${userId}`);
