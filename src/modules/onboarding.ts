@@ -112,7 +112,7 @@ bot.chatType("private").command(["rules", "rule"], async (ctx: any) => {
 
 // ── D) Guide callbacks — registered on bot directly to avoid middleware shadowing ──
 
-bot.callbackQuery(/^(guide:clients|guide:rules|guide:commands|guide:menu|guide:invite|guide:leaderboard|guide:mystats|guide:spinwar|guide:shop)$/, async (ctx: any) => {
+bot.callbackQuery(/^(guide:clients|guide:rules|guide:commands|guide:menu|guide:invite|guide:leaderboard|guide:mystats)$/, async (ctx: any) => {
     const data: string = ctx.callbackQuery.data;
     const userId: number = ctx.from?.id;
     console.log(`[GuideMenu] click ${data} user=${userId}`);
@@ -154,18 +154,6 @@ bot.callbackQuery(/^(guide:clients|guide:rules|guide:commands|guide:menu|guide:i
     } else if (data === "guide:menu") {
         const inviteUrl = await getGroupInviteUrl();
         await ctx.editMessageText(GUIDE_MENU_TEXT, { reply_markup: buildMainMenu(inviteUrl), parse_mode: "HTML" });
-    } else if (data === "guide:spinwar") {
-        await ctx.editMessageText(
-            "🎰 <b>SpinWar</b>\n\n" +
-            "Šis žaidimas dar kuriamas. Grįžk vėliau! 🚧",
-            { reply_markup: backRow, parse_mode: "HTML" }
-        );
-    } else if (data === "guide:shop") {
-        await ctx.editMessageText(
-            "🛍️ <b>Parduotuvė</b>\n\n" +
-            "Parduotuvė dar kuriama. Grįžk vėliau! 🚧",
-            { reply_markup: backRow, parse_mode: "HTML" }
-        );
     } else if (data === "guide:invite") {
         try {
             const inviteUrl = await getGroupInviteUrl();
