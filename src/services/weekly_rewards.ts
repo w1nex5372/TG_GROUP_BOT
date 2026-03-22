@@ -5,7 +5,7 @@ import { bot } from "../bot";
 import { channel_log } from "../logger";
 
 // ── Prizes: 1st / 2nd / 3rd place tokens ─────────────────────────────────────
-const PRIZES = [1000, 500, 200];
+const PRIZES = [1000, 500, 250];
 const LABELS = ["🥇 1-a vieta", "🥈 2-a vieta", "🥉 3-a vieta"];
 
 // ── Lazy Render PostgreSQL pool ───────────────────────────────────────────────
