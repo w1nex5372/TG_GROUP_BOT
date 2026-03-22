@@ -15,14 +15,12 @@ export function buildMainMenu(inviteUrl: string): InlineKeyboard {
     return new InlineKeyboard()
         .url(`${E.spinwar} Žaisti SpinWar`, "https://t.me/Testukas999Bot")
         .url(`${E.shop} Parduotuvė`, "https://t.me/SpinWarPlayBot").row()
-        .url(`${E.group} Grupė`, inviteUrl)
-        .text(`${E.rules} Taisyklės`, "guide:rules").row()
-        .url(`${E.help} Pagalba`, "https://t.me/Bishopas777")
-        .text(`${E.commands} Komandos`, "guide:commands").row()
-        .text(`${E.trophy} Leaderboard`, "guide:leaderboard")
-        .text(`${E.stats} Mano statistika`, "guide:mystats").row()
+        .text(`${E.stats} Mano balansas`, "guide:balance")
+        .text(`${E.trophy} Leaderboard`, "guide:leaderboard").row()
         .text(`${E.invite} Pakviesti draugą`, "guide:invite").row()
-        .text(`${E.verified} Patvirtinti nariai`, "guide:clients");
+        .url(`${E.group} Grupė`, inviteUrl)
+        .url(`${E.help} Pagalba`, "https://t.me/Bishopas777").row()
+        .text(`📖 Kaip tai veikia?`, "guide:howto");
 }
 
 /** Single "⬅️ Atgal" back button. */

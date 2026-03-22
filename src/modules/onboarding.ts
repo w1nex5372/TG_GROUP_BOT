@@ -5,7 +5,8 @@ import { loadClients, buildClientsKeyboard } from "../clients_list";
 import { ensureRefCode, getLeaderboard, buildStatsText } from "../database/referrals_sql";
 import { getGroupInviteUrl } from "../database/settings_sql";
 import { buildMainMenu, buildBackRow, buildInviteKeyboard } from "../ui/buttons";
-import { GUIDE_MENU_TEXT, buildRulesText, buildCommandsText, buildLeaderboardMessage } from "../ui/messages";
+import { GUIDE_MENU_TEXT, buildRulesText, buildCommandsText, buildLeaderboardMessage, buildHowItWorksText } from "../ui/messages";
+import { Pool } from "pg";
 
 // Re-export so referrals.ts can continue to import from this module unchanged.
 export { buildMainMenu, GUIDE_MENU_TEXT };
@@ -110,9 +111,29 @@ bot.chatType("private").command(["rules", "rule"], async (ctx: any) => {
     console.log(`[DM] /rules -> user=${ctx.from?.id}`);
 });
 
+// ── SpinWar DB balance lookup ─────────────────────────────────────────────────
+
+let spinwarPool: Pool | null = null;
+function getSpinwarPool(): Pool | null {
+    if (!process.env.SPINWAR_DB_URL) return null;
+    if (!spinwarPool) {
+        spinwarPool = new Pool({ connectionString: process.env.SPINWAR_DB_URL, ssl: { rejectUnauthorized: false }, max: 3 });
+    }
+    return spinwarPool;
+}
+
+async function getTokenBalance(telegramId: number): Promise<number | null> {
+    const pool = getSpinwarPool();
+    if (!pool) return null;
+    const res = await pool.query<{ token_balance: number }>(
+        "SELECT token_balance FROM users WHERE telegram_id = $1", [telegramId]
+    );
+    return res.rows[0]?.token_balance ?? null;
+}
+
 // ── D) Guide callbacks — registered on bot directly to avoid middleware shadowing ──
 
-bot.callbackQuery(/^(guide:clients|guide:rules|guide:commands|guide:menu|guide:invite|guide:leaderboard|guide:mystats)$/, async (ctx: any) => {
+bot.callbackQuery(/^(guide:clients|guide:rules|guide:commands|guide:menu|guide:invite|guide:leaderboard|guide:mystats|guide:balance|guide:howto)$/, async (ctx: any) => {
     const data: string = ctx.callbackQuery.data;
     const userId: number = ctx.from?.id;
     console.log(`[GuideMenu] click ${data} user=${userId}`);
@@ -151,6 +172,18 @@ bot.callbackQuery(/^(guide:clients|guide:rules|guide:commands|guide:menu|guide:i
     } else if (data === "guide:mystats") {
         const text = await buildStatsText(BigInt(userId));
         await ctx.editMessageText(text, { reply_markup: backRow });
+    } else if (data === "guide:balance") {
+        try {
+            const balance = await getTokenBalance(userId);
+            const text = balance === null
+                ? `📊 <b>Mano balansas</b>\n\nTavo paskyra SpinWar sistemoje nerasta.\n\nPradėk žaisti per @Testukas999Bot kad sukurtum balansą! 🎰`
+                : `📊 <b>Mano balansas</b>\n\n🎰 Tokenai: <b>${balance}</b>\n💶 Vertė: <b>~${(balance / 100).toFixed(2)} EUR</b>\n\nPirkti daugiau: @SpinWarPlayBot`;
+            await ctx.editMessageText(text, { reply_markup: backRow, parse_mode: "HTML" });
+        } catch {
+            await ctx.editMessageText("❌ Nepavyko gauti balanso. Bandyk vėliau.", { reply_markup: backRow });
+        }
+    } else if (data === "guide:howto") {
+        await ctx.editMessageText(buildHowItWorksText(), { reply_markup: backRow, parse_mode: "HTML" });
     } else if (data === "guide:menu") {
         const inviteUrl = await getGroupInviteUrl();
         await ctx.editMessageText(GUIDE_MENU_TEXT, { reply_markup: buildMainMenu(inviteUrl), parse_mode: "HTML" });

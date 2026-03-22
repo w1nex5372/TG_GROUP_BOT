@@ -8,13 +8,35 @@ export const DIVIDER = "─────────────────";
  * Sent when a user opens the bot or clicks the guide deep-link.
  */
 export const GUIDE_MENU_TEXT =
-    `${E.hello} <b>Sveikas!</b>\n\n` +
-    `Sveiki atvykę į mūsų bendruomenės botą.\n\n` +
-    `Čia gali:\n\n` +
-    `${E.trophy} kviesti draugus ir rinkti taškus\n` +
-    `${E.stats} matyti lyderių sąrašą\n` +
-    `${E.pin} rasti svarbią informaciją apie grupę\n\n` +
+    `🎰 <b>Sveiki atvykę į SpinWar!</b>\n\n` +
+    `Telegram ruletė kur laimėtojas paima viską ${E.trophy}\n\n` +
+    `${E.spinwar} Žaisk ir laimėk tokenų\n` +
+    `${E.invite} Kvieski draugus ir rink taškus\n` +
+    `${E.trophy} Savaitės TOP 3 gauna tokenų premiją\n\n` +
     `Pasirink veiksmą žemiau ${E.down}`;
+
+/** How it works page (HTML). */
+export function buildHowItWorksText(): string {
+    return (
+        `📖 <b>SpinWar — greitas gidas</b>\n\n` +
+        `🎰 <b>ŽAIDIMAS</b>\n` +
+        `Prisijunk prie kambario per @Testukas999Bot\n` +
+        `Sumok tokenais → ratas sukasi\n` +
+        `Daugiau statai = didesnis segmentas = didesnė laimėjimo tikimybė\n` +
+        `Laimėtojas paima <b>viską!</b>\n\n` +
+        `🛍️ <b>TOKENAI</b>\n` +
+        `Pirk per @SpinWarPlayBot arba mini app\n` +
+        `<b>100 tokenų = 1 EUR</b> (mokama SOL)\n\n` +
+        `📣 <b>UŽDIRBK NEMOKAMAI</b>\n` +
+        `Pakvieski draugą → <b>+1 taškas</b>\n` +
+        `Draugas prisijungia prie grupės → <b>+1 taškas</b> abiem\n\n` +
+        `🏆 <b>SAVAITĖS PRIZAI</b>\n` +
+        `Kiekvieną pirmadienį TOP 3 kvietėjai gauna:\n` +
+        `🥇 1 vieta — <b>1000 tokenų</b>\n` +
+        `🥈 2 vieta — <b>500 tokenų</b>\n` +
+        `🥉 3 vieta — <b>250 tokenų</b>`
+    );
+}
 
 /** Group rules page (HTML). */
 export function buildRulesText(): string {
