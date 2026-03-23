@@ -199,10 +199,18 @@ bot.callbackQuery(/^(guide:clients|guide:rules|guide:commands|guide:menu|guide:i
             const keyboard = buildInviteKeyboard(shareUrl, inviteUrl);
 
             await ctx.editMessageText(
-                "📣 <b>Pakviesk draugą ir rink taškus!</b>\n\n" +
-                "Draugas paspaus nuorodą → botas užregistruos kvietimą → draugas prisijungs prie grupės.\n\n" +
-                `Tavo nuoroda (paspausk ir nukopijuok):\n<code>${refLink}</code>\n\n` +
-                "📌 Greitos komandos:\n<code>/postclients</code> · <code>/rules</code> · <code>/help</code>",
+                "🎰 <b>Pakviesk draugą į SpinWar!</b>\n\n" +
+                "Telegram ruletė, kur laimėtojas paima <b>VISKĄ</b> — ir tu uždirbki už kiekvieną draugą, kurį atsivedei!\n\n" +
+                "💰 <b>Kaip veikia?</b>\n" +
+                "→ Draugas spaudžia tavo nuorodą\n" +
+                "→ Tu gauni <b>+1 tašką</b> iškart\n" +
+                "→ Draugui prisijungus prie grupės — <b>+1 taškas</b> abiem!\n\n" +
+                "🏆 <b>TOP 3 kvietėjai kiekvieną pirmadienį gauna:</b>\n" +
+                "🥇 1 vieta — <b>1 000 tokenų</b>\n" +
+                "🥈 2 vieta — <b>500 tokenų</b>\n" +
+                "🥉 3 vieta — <b>250 tokenų</b>\n\n" +
+                `🔗 <b>Tavo asmeninė nuoroda:</b>\n<code>${refLink}</code>\n\n` +
+                "Siųsk draugams ir lipk į viršų! 🚀",
                 { reply_markup: keyboard, parse_mode: "HTML" },
             );
         } catch (err) {
