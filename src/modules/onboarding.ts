@@ -133,7 +133,7 @@ async function getTokenBalance(telegramId: number): Promise<number | null> {
 
 // ── D) Guide callbacks — registered on bot directly to avoid middleware shadowing ──
 
-bot.callbackQuery(/^(guide:clients|guide:rules|guide:commands|guide:menu|guide:invite|guide:invite:share|guide:leaderboard|guide:mystats|guide:balance|guide:howto)$/, async (ctx: any) => {
+bot.callbackQuery(/^(guide:clients|guide:rules|guide:commands|guide:menu|guide:invite|guide:leaderboard|guide:mystats|guide:balance|guide:howto)$/, async (ctx: any) => {
     const data: string = ctx.callbackQuery.data;
     const userId: number = ctx.from?.id;
     console.log(`[GuideMenu] click ${data} user=${userId}`);
@@ -192,7 +192,24 @@ bot.callbackQuery(/^(guide:clients|guide:rules|guide:commands|guide:menu|guide:i
             const inviteUrl = await getGroupInviteUrl();
             const refCode = await ensureRefCode(BigInt(userId));
             const refLink = `https://t.me/${constants.BOT_USERNAME}?start=ref_${refCode}`;
-            const keyboard = buildInviteKeyboard(inviteUrl);
+
+            const shareText =
+                `🎰 SpinWar — Telegram ruletės žaidimas!\n\n` +
+                `Draugas pakvietė tave prisijungti prie SpinWar bendruomenės.\n\n` +
+                `🎯 Kas tai?\n` +
+                `→ Sukk ratą Telegram Mini Game\n` +
+                `→ Laimėtojas paima VISKĄ iš fondo\n` +
+                `→ Žaisk nemokamai, laimėk realiai 💸\n\n` +
+                `🏆 Savaitės TOP 3 gauna:\n` +
+                `🥇 1 vieta — 1 000 tokenų\n` +
+                `🥈 2 vieta — 500 tokenų\n` +
+                `🥉 3 vieta — 250 tokenų\n\n` +
+                `💬 Prisijunk per nuorodą ir gauk bonusą:`;
+            const shareUrl =
+                `https://t.me/share/url?url=${encodeURIComponent(refLink)}` +
+                `&text=${encodeURIComponent(shareText)}`;
+
+            const keyboard = buildInviteKeyboard(shareUrl, inviteUrl);
 
             const caption =
                 "🎰 <b>Pakviesk draugą į SpinWar!</b>\n\n" +
@@ -201,8 +218,7 @@ bot.callbackQuery(/^(guide:clients|guide:rules|guide:commands|guide:menu|guide:i
                 "→ Draugas spaudžia tavo nuorodą → <b>+1 taškas</b>\n" +
                 "→ Prisijungus prie grupės → <b>+1 taškas abiem</b>\n\n" +
                 "🥇 TOP 3 kiekvieną savaitę gauna <b>1 000 / 500 / 250 tokenų</b>\n\n" +
-                `🔗 <b>Tavo nuoroda:</b>\n<code>${refLink}</code>\n\n` +
-                "Spausk <b>Dalintis</b> — gausi kortelę su nuotrauka, kurią persiųsi draugams! 👇";
+                `🔗 <b>Tavo nuoroda:</b>\n<code>${refLink}</code>`;
 
             const bannerId = constants.INVITE_BANNER_FILE_ID;
             if (bannerId) {
@@ -221,38 +237,6 @@ bot.callbackQuery(/^(guide:clients|guide:rules|guide:commands|guide:menu|guide:i
         } catch (err) {
             console.error("[GuideMenu] guide:invite error:", err);
             await ctx.answerCallbackQuery({ text: "Klaida generuojant nuorodą." });
-        }
-    } else if (data === "guide:invite:share") {
-        try {
-            const refCode = await ensureRefCode(BigInt(userId));
-            const refLink = `https://t.me/${constants.BOT_USERNAME}?start=ref_${refCode}`;
-
-            const cardCaption =
-                "🎰 <b>SpinWar — Telegram ruletės žaidimas!</b>\n\n" +
-                "Draugas pakvietė tave prisijungti prie SpinWar bendruomenės.\n\n" +
-                "🎯 <b>Kas tai?</b>\n" +
-                "→ Sukk ratą Telegram Mini Game\n" +
-                "→ Laimėtojas paima <b>VISKĄ</b> iš fondo\n" +
-                "→ Žaisk nemokamai, laimėk realiai 💸\n\n" +
-                "🏆 <b>Savaitės TOP 3 gauna:</b>\n" +
-                "🥇 1 vieta — 1 000 tokenų\n" +
-                "🥈 2 vieta — 500 tokenų\n" +
-                "🥉 3 vieta — 250 tokenų\n\n" +
-                `💬 Prisijunk per nuorodą ir gauk bonusą:\n<code>${refLink}</code>`;
-
-            const bannerId = constants.INVITE_BANNER_FILE_ID;
-            if (bannerId) {
-                await ctx.reply("👇 Persiųsk šią kortelę draugams:");
-                await ctx.replyWithPhoto(bannerId, {
-                    caption: cardCaption,
-                    parse_mode: "HTML",
-                });
-            } else {
-                await ctx.reply(cardCaption, { parse_mode: "HTML" });
-            }
-        } catch (err) {
-            console.error("[GuideMenu] guide:invite:share error:", err);
-            await ctx.answerCallbackQuery({ text: "Klaida generuojant kortelę." });
         }
     }
 });
