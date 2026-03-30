@@ -27,7 +27,7 @@ export const E = {
     share:    "📤",
 
     // Games & Shop
-    spinwar:  "🎰",
+    spinwar:  "🎮",
     shop:     "🛍️",
 
     // Medals
