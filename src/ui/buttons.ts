@@ -33,9 +33,9 @@ export function buildBackRow(): InlineKeyboard {
  *   [ 👥 Prisijungti prie grupės ]  ← only if inviteUrl is set
  *   [ ⬅️ Atgal ]
  */
-export function buildInviteKeyboard(shareUrl: string, inviteUrl: string): InlineKeyboard {
+export function buildInviteKeyboard(inviteUrl: string): InlineKeyboard {
     const kb = new InlineKeyboard()
-        .url(`${E.share} Dalintis`, shareUrl).row();
+        .text(`${E.share} Dalintis`, "guide:invite:share").row();
     if (inviteUrl) {
         kb.url(`${E.group} Prisijungti prie grupės`, inviteUrl).row();
     }
