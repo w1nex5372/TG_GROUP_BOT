@@ -160,11 +160,7 @@ async function resolveJoinUrl(
     refCode: string,
     groupId: number | null,
 ): Promise<string> {
-    // 1. Stored link
-    const stored = await getReferralInviteLink(referredId);
-    if (stored) return stored;
-
-    // 2. Generate fresh
+    // Always generate a fresh link — stored links can expire or hit member_limit.
     if (groupId !== null) {
         const generated = await generateGroupInviteLink(groupId, referredId, refCode);
         if (generated) {
@@ -173,7 +169,7 @@ async function resolveJoinUrl(
         }
     }
 
-    // 3. Static fallback
+    // Fallback: static group invite URL
     return getGroupInviteUrl();
 }
 

@@ -13,7 +13,6 @@ import { E } from "./emoji";
  */
 export function buildMainMenu(inviteUrl: string): InlineKeyboard {
     return new InlineKeyboard()
-        .url(`${E.spinwar} Žaisti SpinWar`, "https://t.me/Testukas999Bot")
         .url(`${E.shop} Parduotuvė`, "https://t.me/SpinWarPlayBot").row()
         .url(`${E.group} Grupė`, inviteUrl)
         .text(`${E.stats} Mano balansas`, "guide:balance").row()
