@@ -56,6 +56,8 @@ const constants = cleanEnv(process.env, {
     REF_REQUIRE_GROUP_JOIN: str({ default: "true" }),
     REF_JOIN_WINDOW_HOURS: str({ default: "24" }),
     REF_DAILY_CAP: str({ default: "20" }),
+    // Invite banner (Telegram file_id of the banner photo shown on invite screen)
+    INVITE_BANNER_FILE_ID: str({ default: "" }),
     // Weekly rewards
     SPINWAR_DB_URL: str({ default: "" }),
     WEEKLY_REWARDS_CRON: str({ default: "0 10 * * 1" }),

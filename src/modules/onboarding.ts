@@ -192,27 +192,40 @@ bot.callbackQuery(/^(guide:clients|guide:rules|guide:commands|guide:menu|guide:i
             const inviteUrl = await getGroupInviteUrl();
             const refCode = await ensureRefCode(BigInt(userId));
             const refLink = `https://t.me/${constants.BOT_USERNAME}?start=ref_${refCode}`;
+            const shareText =
+                `🎰 SpinWar — Telegram Mini Game!\n\n` +
+                `🏆 Sukk ratą, laimėk tokenų\n` +
+                `💸 Laimėtojas paima VISKĄ\n\n` +
+                `Žaisk nemokamai 👇`;
             const shareUrl =
                 `https://t.me/share/url?url=${encodeURIComponent(refLink)}` +
-                `&text=${encodeURIComponent("Prisijunk prie grupės per mano nuorodą!")}`;
+                `&text=${encodeURIComponent(shareText)}`;
 
             const keyboard = buildInviteKeyboard(shareUrl, inviteUrl);
 
-            await ctx.editMessageText(
+            const caption =
                 "🎰 <b>Pakviesk draugą į SpinWar!</b>\n\n" +
-                "Telegram ruletė, kur laimėtojas paima <b>VISKĄ</b> — ir tu uždirbki už kiekvieną draugą, kurį atsivedei!\n\n" +
-                "💰 <b>Kaip veikia?</b>\n" +
-                "→ Draugas spaudžia tavo nuorodą\n" +
-                "→ Tu gauni <b>+1 tašką</b> iškart\n" +
-                "→ Draugui prisijungus prie grupės — <b>+1 taškas</b> abiem!\n\n" +
-                "🏆 <b>TOP 3 kvietėjai kiekvieną pirmadienį gauna:</b>\n" +
-                "🥇 1 vieta — <b>1 000 tokenų</b>\n" +
-                "🥈 2 vieta — <b>500 tokenų</b>\n" +
-                "🥉 3 vieta — <b>250 tokenų</b>\n\n" +
-                `🔗 <b>Tavo asmeninė nuoroda:</b>\n<code>${refLink}</code>\n\n` +
-                "Siųsk draugams ir lipk į viršų! 🚀",
-                { reply_markup: keyboard, parse_mode: "HTML" },
-            );
+                "Telegram ruletė — sukk ratą ir laimėk tokenų.\n" +
+                "<b>Laimėtojas paima VISKĄ 🏆</b>\n\n" +
+                "→ Draugas spaudžia tavo nuorodą → <b>+1 taškas</b>\n" +
+                "→ Prisijungus prie grupės → <b>+1 taškas abiem</b>\n\n" +
+                "🥇 TOP 3 kiekvieną savaitę gauna <b>1 000 / 500 / 250 tokenų</b>\n\n" +
+                `🔗 <b>Tavo nuoroda:</b>\n<code>${refLink}</code>`;
+
+            const bannerId = constants.INVITE_BANNER_FILE_ID;
+            if (bannerId) {
+                await ctx.deleteMessage().catch(() => {});
+                await ctx.replyWithPhoto(bannerId, {
+                    caption,
+                    reply_markup: keyboard,
+                    parse_mode: "HTML",
+                });
+            } else {
+                await ctx.editMessageText(caption + "\n\nSiųsk draugams ir lipk į viršų! 🚀", {
+                    reply_markup: keyboard,
+                    parse_mode: "HTML",
+                });
+            }
         } catch (err) {
             console.error("[GuideMenu] guide:invite error:", err);
             await ctx.answerCallbackQuery({ text: "Klaida generuojant nuorodą." });
