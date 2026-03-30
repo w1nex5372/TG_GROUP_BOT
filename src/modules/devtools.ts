@@ -256,16 +256,18 @@ composer.command("adminhelp", superusersOnly(async (ctx: any) => {
 }));
 
 composer.chatType("private").command("getfileid", superusersOnly(async (ctx: any) => {
-    const photo = ctx.message?.photo;
-    const doc = ctx.message?.document;
-    if (photo) {
-        const largest = photo[photo.length - 1];
-        await ctx.reply(`📷 Photo file_id:\n<code>${largest.file_id}</code>`, { parse_mode: "HTML" });
-    } else if (doc) {
-        await ctx.reply(`📄 Document file_id:\n<code>${doc.file_id}</code>`, { parse_mode: "HTML" });
-    } else {
-        await ctx.reply("Siųsk nuotrauką kartu su komanda /getfileid (kaip caption).");
-    }
+    await ctx.reply("Siųsk nuotrauką su caption <code>/getfileid</code>.", { parse_mode: "HTML" });
+}));
+
+composer.chatType("private").on("message:photo", superusersOnly(async (ctx: any, next: () => Promise<void>) => {
+    if (!ctx.message.caption?.startsWith("/getfileid")) return next();
+    const largest = ctx.message.photo[ctx.message.photo.length - 1];
+    await ctx.reply(`📷 Photo file_id:\n<code>${largest.file_id}</code>`, { parse_mode: "HTML" });
+}));
+
+composer.chatType("private").on("message:document", superusersOnly(async (ctx: any, next: () => Promise<void>) => {
+    if (!ctx.message.caption?.startsWith("/getfileid")) return next();
+    await ctx.reply(`📄 Document file_id:\n<code>${ctx.message.document.file_id}</code>`, { parse_mode: "HTML" });
 }));
 
 export default composer;
